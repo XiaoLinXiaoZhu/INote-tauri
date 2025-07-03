@@ -21,7 +21,9 @@
         "minHeight": 400,
         "minWidth": 300,
         "resizable": true,
-        "title": "I便笺"
+        "title": "I便笺",
+        "decorations": false,
+        "closable": true
       }
     ],
     "withGlobalTauri": false

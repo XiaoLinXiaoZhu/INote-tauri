@@ -21,13 +21,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeMount, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ILoading from '@/components/ILoading.vue';
 
 // 导入 Tauri API
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { listen, emit } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import { twiceHandle, uuid } from '@/utils';
 import { noteService } from '@/service/tauriNoteService';
 
@@ -77,6 +78,9 @@ onBeforeMount(async () => {
   // 获取当前窗口
   const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
   currentWindow = getCurrentWebviewWindow();
+  
+  // 注册编辑器窗口
+  await invoke('register_editor_window');
   
   await initEditorContent();
   await afterIpc();
@@ -219,6 +223,9 @@ const updateData = async (updateType: 'className' | 'content') => {
 };
 
 const closeWindow = async () => {
+  // 注销编辑器窗口
+  await invoke('unregister_editor_window');
+  
   // 如果是新建便签且没有内容，则删除
   if (isNewNote.value && !iEditorHtml.value?.trim()) {
     try {
@@ -229,6 +236,9 @@ const closeWindow = async () => {
       console.error('删除空便签失败:', error);
     }
   }
+  
+  // 关闭当前窗口
+  await currentWindow.close();
 };
 
 /**

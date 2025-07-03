@@ -93,6 +93,12 @@ const setLiRef = (el: HTMLLIElement) => {
 onMounted(async () => {
   // 监听来自编辑器的事件
   await setupEventListeners();
+  
+  // 监听窗口重新显示事件
+  await listen('tauri://focus', () => {
+    // 当窗口重新获得焦点时刷新数据
+    getAllDBNotes();
+  });
 });
 
 onBeforeMount(() => {

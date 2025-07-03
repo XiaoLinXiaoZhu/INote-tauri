@@ -1,10 +1,8 @@
 <template>
   <header class="header flex-between">
     <template v-if="currentRouteName === 'setting'">
-      <button class="icon flex-center" title="返回">
-        <router-link class="flex-center" to="/">
-          <i class="iconfont flex-center icon-back"></i>
-        </router-link>
+      <button class="icon flex-center" title="返回" @click="goBack">
+        <i class="iconfont flex-center icon-back"></i>
       </button>
     </template>
     <template v-else-if="currentRouteName !== 'imagePreview'">
@@ -14,7 +12,7 @@
       </button>
     </template>
     <!-- 标题拖动 -->
-    <div class="drag-header flex1 flex-center" :style="computedPaddingLeft" @mousedown="a">
+    <div class="drag-header flex1 flex-center" :style="paddingStyle" @mousedown="dragWindow">
       <transition name="header-fadein" v-if="platformWindows">
         <span :key="title">{{ title }}</span>
       </transition>
@@ -23,10 +21,8 @@
     <div class="operation-btn flex-items">
       <!-- 设置 -->
       <template v-if="currentRouteName === 'index'">
-        <button class="icon flex-center" title="设置">
-          <router-link class="flex-center" to="/setting">
-            <i class="iconfont flex-center icon-setting"></i>
-          </router-link>
+        <button class="icon flex-center" title="设置" @click="goToSetting">
+          <i class="iconfont flex-center icon-setting"></i>
         </button>
       </template>
       <template v-else-if="currentRouteName === 'editor'">
@@ -55,14 +51,44 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { onBeforeRouteUpdate, useRoute } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
 import { browserWindowOption } from '@/config';
 import { createBrowserWindow, transitCloseWindow } from '@/utils';
-import { remote } from 'electron';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { platform as getPlatform } from '@tauri-apps/plugin-os';
 
 const emits = defineEmits(['optionClick', 'onClose']);
-const platformWindows = process.platform === 'win32';
+const platformWindows = ref(false);
+
+// 拖动窗口相关变量和样式
+const paddingStyle = ref('');
+
+// 拖动窗口函数
+const dragWindow = () => {
+  // Tauri 中使用 CSS 属性 "-webkit-app-region: drag" 代替
+  // 这个函数保留是为了兼容模板引用
+};
+
+// 检测操作系统类型
+onMounted(async () => {
+  try {
+    // 仅在 Tauri 环境下调用 plugin-os
+    if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+      if (typeof getPlatform === 'function') {
+        const osType = await getPlatform();
+        platformWindows.value = osType === 'windows';
+      } else {
+        platformWindows.value = navigator.userAgent.includes('Windows');
+      }
+    } else {
+      platformWindows.value = navigator.userAgent.includes('Windows');
+    }
+  } catch (error) {
+    console.error('获取操作系统类型失败:', error);
+    platformWindows.value = navigator.userAgent.includes('Windows');
+  }
+});
 
 const editorWinOptions = browserWindowOption('editor');
 // 打开新窗口
@@ -71,37 +97,49 @@ const openNewWindow = () => {
 };
 
 // 获取窗口固定状态
-let isAlwaysOnTop = ref(false);
-const currentWindow = remote.getCurrentWindow();
-isAlwaysOnTop.value = currentWindow.isAlwaysOnTop();
+const isAlwaysOnTop = ref(false);
+let currentWindow: WebviewWindow;
+
+onMounted(async () => {
+  const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+  currentWindow = getCurrentWebviewWindow();
+  
+  // 在 Tauri 中获取窗口置顶状态
+  try {
+    // 我们无法直接在 Tauri WebviewWindow 上获取置顶状态，先设置为 false
+    isAlwaysOnTop.value = false;
+  } catch (error) {
+    console.error('获取窗口置顶状态失败:', error);
+  }
+});
 
 // 固定前面
-const drawingPin = () => {
-  if (isAlwaysOnTop.value) {
-    currentWindow.setAlwaysOnTop(false);
-    isAlwaysOnTop.value = false;
-  } else {
-    currentWindow.setAlwaysOnTop(true);
-    isAlwaysOnTop.value = true;
+const drawingPin = async () => {
+  try {
+    isAlwaysOnTop.value = !isAlwaysOnTop.value;
+    // 设置窗口是否置顶
+    await currentWindow.setAlwaysOnTop(isAlwaysOnTop.value);
+  } catch (error) {
+    console.error('设置窗口置顶状态失败:', error);
   }
 };
 
-const currentRouteName = ref(useRoute().name);
-
-// 获取首页的内边距
-const computedPaddingLeft = computed(() => {
-  return currentRouteName.value === 'index' ? 'padding-left: 40px;' : '';
+defineProps({
+  showPin: {
+    type: Boolean,
+    default: false
+  },
+  showSettingBack: {
+    type: Boolean,
+    default: false
+  }
 });
 
-const title = ref(useRoute().meta.title as string);
+// 获取当前路由名
+const currentRouteName = ref<any>(useRoute().name);
+const router = useRouter();
 
-onBeforeRouteUpdate((to, from, next) => {
-  title.value = to.meta.title as string;
-  document.title = title.value;
-  currentRouteName.value = to.name;
-  next();
-});
-
+// 点击选项按钮
 const clickOptions = () => {
   emits('optionClick');
 };
@@ -112,9 +150,26 @@ const closeWindow = () => {
   transitCloseWindow();
 };
 
-const a = () => {
-  console.log(1);
+/**
+ * 返回首页
+ */
+const goBack = () => {
+  router.go(-1);
 };
+
+// 跳转到设置页面
+const goToSetting = () => {
+  router.push('/setting');
+};
+
+const title = ref(useRoute().meta.title as string);
+
+onBeforeRouteUpdate((to, _from, next) => {
+  title.value = to.meta.title as string;
+  document.title = title.value;
+  currentRouteName.value = to.name;
+  next();
+});
 </script>
 
 <style lang="less" scoped>

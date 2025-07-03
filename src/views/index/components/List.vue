@@ -28,17 +28,15 @@
 
 <script setup lang="ts">
 import CreateRightClick from '@/components/IRightClick';
-import { browserWindowOption, constImagesPath } from '@/config';
-import { Notes } from '@/service';
-import { DBNotesListType, DBNotesType } from '@/types/notes';
+import { browserWindowOption } from '@/config';
+import { noteService } from '@/service/tauriNoteService';
+import { DBNotesListType } from '@/types/notes';
 import { createBrowserWindow } from '@/utils';
 import dayjs from 'dayjs';
-import { ipcRenderer, remote } from 'electron';
-import { onBeforeMount, onMounted, PropType, Ref, ref, watch } from 'vue';
+import { onBeforeMount, onMounted, onUnmounted, PropType, Ref, ref, watch } from 'vue';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { notesState } from '@/store/notes.state';
 import IMessageBox from '@/components/IMessageBox.vue';
-import { readdir, readdirSync, rmdir, rmdirSync, unlinkSync } from 'fs-extra';
-import { join, dirname } from 'path';
 
 const props = defineProps({
   list: {
@@ -68,15 +66,7 @@ const todayZeroTimeStamp = dayjs()
 
 const bwsWinOption = browserWindowOption('editor');
 const openEditorWindow = (uid: string) => {
-  let countFlag = false;
-  ipcRenderer.send(`${uid}_toOpen`);
-  ipcRenderer.on(`get_${uid}_toOpen`, () => {
-    countFlag = true;
-    return;
-  });
-  setTimeout(() => {
-    if (!countFlag) createBrowserWindow(bwsWinOption, `/editor?uid=${uid}`, true);
-  }, 100);
+  createBrowserWindow(bwsWinOption, `/editor?uid=${uid}`, true);
 };
 
 watch(
@@ -94,29 +84,83 @@ watch(
   }
 );
 
+// setLiRef 函数暂时保留但未使用
 const setLiRef = (el: HTMLLIElement) => {
   console.log(el);
   liRef.value.push(el);
 };
 
-onMounted(() => {});
+onMounted(async () => {
+  // 监听来自编辑器的事件
+  await setupEventListeners();
+});
 
 onBeforeMount(() => {
   getAllDBNotes();
-  electronIpcEditor();
+});
+
+// 事件监听器存储
+const unlistenFns: UnlistenFn[] = [];
+
+const setupEventListeners = async () => {
+  // 监听新建便签事件
+  const unlistenCreate = await listen('createNewNote', (event) => {
+    console.log('收到创建新便签事件:', event.payload);
+    getAllDBNotes(); // 刷新列表
+  });
+  unlistenFns.push(unlistenCreate);
+
+  // 监听便签内容更新事件
+  const unlistenContentUpdate = await listen('updateNoteItem_content', (event) => {
+    console.log('收到便签内容更新事件:', event.payload);
+    getAllDBNotes(); // 刷新列表
+  });
+  unlistenFns.push(unlistenContentUpdate);
+
+  // 监听便签颜色更新事件
+  const unlistenColorUpdate = await listen('updateNoteItem_className', (event) => {
+    console.log('收到便签颜色更新事件:', event.payload);
+    getAllDBNotes(); // 刷新列表
+  });
+  unlistenFns.push(unlistenColorUpdate);
+
+  // 监听删除空便签事件
+  const unlistenRemoveEmpty = await listen('removeEmptyNoteItem', (event) => {
+    console.log('收到删除空便签事件:', event.payload);
+    getAllDBNotes(); // 刷新列表
+  });
+  unlistenFns.push(unlistenRemoveEmpty);
+};
+
+// 组件卸载时清理事件监听器
+onUnmounted(() => {
+  unlistenFns.forEach(unlisten => unlisten());
 });
 
 const getAllDBNotes = async () => {
-  const notesAllList = await Notes.findAll({
-    raw: true,
-    order: [['updatedAt', 'DESC']],
-    attributes: ['uid', 'className', 'interception', 'updatedAt']
-  });
-  viewNotesList.value = (notesAllList as unknown) as DBNotesListType[];
-
-  if (notesAllList.length) {
-    emits('changeBlockState', 1);
-  } else {
+  // 用 Tauri API 获取所有便笺
+  try {
+    const notesAllList = await noteService.getAllNotes();
+    // 转换数据格式以适配现有的界面逻辑
+    const transformedNotes = notesAllList?.map(note => ({
+      uid: note.uid || '',
+      className: note.color || '',
+      content: note.content || '',
+      markdown: note.markdown || note.content || '', // 优先使用 markdown
+      interception: note.content?.substring(0, 100) || '', // 截取前100个字符作为摘要
+      createdAt: new Date(note.created_at || ''),
+      updatedAt: new Date(note.updated_at || ''),
+      remove: false // 添加 remove 属性
+    })) || [];
+    
+    viewNotesList.value = transformedNotes;
+    if (transformedNotes && transformedNotes.length) {
+      emits('changeBlockState', 1);
+    } else {
+      emits('changeBlockState', 2);
+    }
+  } catch (e) {
+    viewNotesList.value = [];
     emits('changeBlockState', 2);
   }
 };
@@ -153,85 +197,30 @@ const deleteNotes = async () => {
     notesState.value.switchStatus.deleteTip = false;
     deleteTipChecked.value = undefined;
   }
-  await Notes.destroy({
-    where: {
-      uid: deleteCurrentUid.value
-    }
-  });
+  // 用 Tauri API 删除便笺
+  await noteService.deleteNoteByUid(deleteCurrentUid.value);
   await removeNoteItem(deleteCurrentUid.value);
-  /**
-   * deleteActiveItem_{uid}
-   * 此处通信便笺编辑
-   * 场景：如果打开窗口就进行关闭
-   */
-  ipcRenderer.send(`deleteActiveItem_${deleteCurrentUid.value}`);
   await deleteNotesUidDir();
   deleteCurrentUid.value = '';
 };
 
 /** 删除便笺后删除本地文件夹 */
 const deleteNotesUidDir = async () => {
-  const uidDir = await join(dirname(remote.app.getPath('exe')), constImagesPath, deleteCurrentUid.value);
-  const imagesPath = await readdirSync(uidDir);
-  for (const imgPath of imagesPath) {
-    await unlinkSync(join(uidDir, imgPath));
+  // TODO: 这里需要实现删除图片文件夹的逻辑
+  try {
+    const { join } = await import('@tauri-apps/api/path');
+    const { exists, remove } = await import('@tauri-apps/plugin-fs');
+    const { appDataDir } = await import('@tauri-apps/api/path');
+    
+    const appDataPath = await appDataDir();
+    const imagesPath = await join(appDataPath, 'images', deleteCurrentUid.value);
+    
+    if (await exists(imagesPath)) {
+      await remove(imagesPath, { recursive: true });
+    }
+  } catch (error) {
+    console.error('删除图片文件夹失败:', error);
   }
-  await rmdirSync(uidDir);
-};
-
-const electronIpcEditor = (): void => {
-  /**
-   * createNewNote
-   * 持续监听创建便笺
-   */
-  remote.ipcMain.on('createNewNote', (event, noteItem: DBNotesType) => {
-    viewNotesList.value.unshift(noteItem);
-    console.log('createNewNote');
-    emits('changeBlockState', 1);
-  });
-
-  /**
-   * updateNoteItem_className
-   * 更新背景样式
-   */
-  remote.ipcMain.on('updateNoteItem_className', (event, updateItem: DBNotesType) => {
-    const cntIndex = viewNotesList.value.findIndex(x => x.uid === updateItem.uid);
-    if (cntIndex === -1) return;
-    viewNotesList.value[cntIndex].className = updateItem.className as string;
-  });
-
-  /**
-   * updateNoteItem_content
-   * 更新content内容
-   */
-  remote.ipcMain.on('updateNoteItem_content', (event, updateItem: DBNotesType) => {
-    const cntIndex = viewNotesList.value.findIndex(x => x.uid === updateItem.uid);
-    if (cntIndex === -1) return;
-    viewNotesList.value[cntIndex].interception = updateItem.interception as string;
-    viewNotesList.value[cntIndex].updatedAt = updateItem.updatedAt!;
-  });
-
-  /**
-   * removeEmptyNoteItem
-   * 获取便笺编辑关闭后如果是空就进行删除
-   */
-  remote.ipcMain.on('removeEmptyNoteItem', (event, uid: string) => {
-    removeNoteItem(uid);
-  });
-
-  /**
-   * whetherToOpen
-   * 判断本列表是否打开，聚焦显示
-   */
-  remote.ipcMain.on('whetherToOpen', event => {
-    remote.getCurrentWindow().show();
-    event.sender.send('getWhetherToOpen');
-  });
-
-  // 失去焦点之后删除右键
-  remote.getCurrentWindow().on('blur', () => {
-    rightClick.remove();
-  });
 };
 
 const removeNoteItem = (uid: string) => {
@@ -333,6 +322,7 @@ const getTime = (time: Date) => {
         display: -webkit-box;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 5;
+        line-clamp: 5;
 
         :deep(*) {
           margin: 0;

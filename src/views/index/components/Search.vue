@@ -13,23 +13,34 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Op } from 'sequelize';
-import { Notes } from '@/service';
+import { noteService } from '@/service/tauriNoteService';
 
 const emits = defineEmits(['onSearch']);
 const searchValue = ref('');
 
 const searchDb = async () => {
-  const data = await Notes.findAll({
-    raw: true,
-    order: [['updatedAt', 'DESC']],
-    where: {
-      content: {
-        [Op.like]: '%' + searchValue.value + '%'
-      }
-    }
-  });
-  emits('onSearch', data, searchValue.value);
+  try {
+    // 如果有搜索内容，使用搜索功能；否则获取所有笔记
+    const data = searchValue.value 
+      ? await noteService.searchNotes(searchValue.value)
+      : await noteService.getAllNotes();
+    
+    // 转换数据格式以保持兼容性
+    const formattedData = data.map(note => ({
+      uid: note.title,
+      className: note.color || '',
+      content: note.content,
+      markdown: note.content,
+      interception: note.content.substring(0, 500),
+      createdAt: note.created_at,
+      updatedAt: note.updated_at
+    }));
+    
+    emits('onSearch', formattedData, searchValue.value);
+  } catch (error) {
+    console.error('搜索笔记失败:', error);
+    emits('onSearch', [], searchValue.value);
+  }
 };
 </script>
 

@@ -92,10 +92,9 @@
     <Card title="关于I便笺">
       <div class="about-app-description">
         <p>版本：{{ version }}</p>
-        <p>Electron: {{ appInfo.electron }}</p>
-        <p>Chrome: {{ appInfo.chrome }}</p>
-        <p>Node.js: {{ appInfo.node }}</p>
-        <p>V8: {{ appInfo.v8 }}</p>
+        <p>平台: {{ appInfo.node }}</p>
+        <p>渲染引擎: {{ appInfo.chrome }}</p>
+        <p>框架: {{ appInfo.electron }}</p>
         <p>Copyright (c) {{ currentYear }} {{ packageJson.author }}.</p>
       </div>
     </Card>
@@ -108,11 +107,9 @@
 </template>
 
 <script setup lang="ts">
-import { remote, shell } from 'electron';
-import fs from 'fs-extra';
 import ISwitch from '@/components/ISwitch.vue';
 import { notesState, resetStore } from '@/store/notes.state';
-import { errorLogPath } from '@/utils/errorLog';
+import { getErrorLogPath } from '@/utils/errorLog';
 import useMessage from '@/components/IMessage';
 import Card from './components/Card.vue';
 import BlockItem from './components/BlockItem.vue';
@@ -121,24 +118,51 @@ import IInput from '@/components/IInput.vue';
 import { ref } from 'vue';
 import IMessageBox from '../../components/IMessageBox.vue';
 import packageJson from '../../../package.json';
+import { exists } from '@tauri-apps/plugin-fs';
+import { open as openShell } from '@tauri-apps/plugin-shell';
+import { getVersion } from '@tauri-apps/api/app';
 
-const appInfo = process.versions;
+// 应用信息
+const appInfo = {
+  node: 'Tauri/Rust',
+  chrome: 'WebView',
+  electron: 'N/A'
+};
 const currentYear = new Date().getFullYear();
-const version = remote.app.getVersion();
+const version = ref('');
 const issueLink = 'https://github.com/heiyehk/electron-vue3-inote/issues';
 const githubLink = 'https://github.com/heiyehk/electron-vue3-inote';
 const clearBtnState = ref(false);
 
-const openLogFolder = () => {
-  if (fs.existsSync(errorLogPath)) {
-    remote.shell.showItemInFolder(errorLogPath);
-  } else {
-    useMessage('ヾ(≧▽≦*)o暂时没有bug', 'success');
+// 获取应用版本
+getVersion().then(v => {
+  version.value = v;
+}).catch(() => {
+  version.value = packageJson.version;
+});
+
+const openLogFolder = async () => {
+  try {
+    const errorLogPath = await getErrorLogPath();
+    const logExists = await exists(errorLogPath);
+    if (logExists) {
+      await openShell(errorLogPath, 'folder');
+    } else {
+      useMessage('ヾ(≧▽≦*)o暂时没有bug', 'success');
+    }
+  } catch (error) {
+    console.error('打开日志文件夹失败:', error);
+    useMessage('打开日志文件夹失败', 'error');
   }
 };
 
-const openExternal = (link: string) => {
-  remote.shell.openExternal(link);
+const openExternal = async (link: string) => {
+  try {
+    await openShell(link);
+  } catch (error) {
+    console.error('打开外部链接失败:', error);
+    useMessage('打开链接失败', 'error');
+  }
 };
 
 const changeAutoNarrow = (data: boolean) => {
@@ -147,8 +171,13 @@ const changeAutoNarrow = (data: boolean) => {
   }
 };
 
-const openImagesUrlDir = () => {
-  shell.openPath(notesState.value.imagesCacheUrl);
+const openImagesUrlDir = async () => {
+  try {
+    await openShell(notesState.value.imagesCacheUrl, 'folder');
+  } catch (error) {
+    console.error('打开图片目录失败:', error);
+    useMessage('打开图片目录失败', 'error');
+  }
 };
 </script>
 

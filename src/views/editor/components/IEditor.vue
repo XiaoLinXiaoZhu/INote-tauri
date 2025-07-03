@@ -7,13 +7,14 @@ import { ref, onMounted } from 'vue';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import CreateRightClick, { MenuOptions } from '@/components/IRightClick';
-import { join, dirname } from 'path';
-import { remote, shell } from 'electron';
 import { constImagesPath } from '@/config';
 import { openImageAsNewWindow, uuid } from '@/utils';
-import { existsSync, mkdirSync, writeFile } from 'fs-extra';
 import useMessage from '@/components/IMessage';
 import { copyImage, fileToBuffer } from '@/utils/file';
+import { open as openShell } from '@tauri-apps/plugin-shell';
+import { join } from '@tauri-apps/api/path';
+import { exists, mkdir, writeFile } from '@tauri-apps/plugin-fs';
+import { appDataDir } from '@tauri-apps/api/path';
 
 const toolbar: IMenuItem[] = [
   {
@@ -70,7 +71,18 @@ const emits = defineEmits(['on-input', 'update:modelValue']);
 const editorRef = ref();
 const vditor = ref<Vditor>();
 const rightClick = new CreateRightClick();
-const currentItemImagePath = join(dirname(remote.app.getPath('exe')), constImagesPath);
+const currentItemImagePath = ref<string>('');
+
+// 初始化图片路径
+onMounted(async () => {
+  try {
+    const appDataPath = await appDataDir();
+    currentItemImagePath.value = await join(appDataPath, constImagesPath.replace('/', ''));
+  } catch (error) {
+    console.error('初始化图片路径失败:', error);
+    currentItemImagePath.value = './images';
+  }
+});
 const urlRegExp = /^(((ht|f)tps?):\/\/)?([^!@#$%^&*?.\s-]([^!@#$%^&*?.\s]{0,63}[^!@#$%^&*?.\s])?\.)+[a-z]{2,6}\/?/;
 
 const loadVditor = () => {
@@ -95,7 +107,7 @@ const loadVditor = () => {
       click: el => {
         // 从浏览器打开链接
         if (urlRegExp.test(el.textContent!)) {
-          shell.openExternal(el.textContent!);
+          openShell(el.textContent!);
         }
       }
     },
@@ -116,26 +128,26 @@ const loadVditor = () => {
 /** 写入图片 */
 const insertImage = async (file: File | Blob) => {
   if (!file) return '';
-  createImageUrl();
+  await createImageUrl();
   const uuidStr = uuid();
   const extName = file.type.split('/')[1];
-  const imagePath = join(currentItemImagePath, props.uid, `${uuidStr}.${extName}`);
+  const imagePath = await join(currentItemImagePath.value, props.uid, `${uuidStr}.${extName}`);
   const buffer = await fileToBuffer(file);
-  await writeFile(imagePath, new Uint8Array(buffer)).catch(err => {
+  await writeFile(imagePath, new Uint8Array(buffer)).catch((err: any) => {
     useMessage(err.message, 'error');
   });
   const htmlImagePath = `![${uuidStr}](atom:///${imagePath})`;
   vditor.value?.insertValue(htmlImagePath);
 };
 
-const createImageUrl = () => {
-  console.log(currentItemImagePath);
-  if (!existsSync(currentItemImagePath)) {
-    mkdirSync(currentItemImagePath);
+const createImageUrl = async () => {
+  console.log(currentItemImagePath.value);
+  if (!await exists(currentItemImagePath.value)) {
+    await mkdir(currentItemImagePath.value, { recursive: true });
   }
-  const currentUidImagePath = join(currentItemImagePath, props.uid);
-  if (!existsSync(currentUidImagePath)) {
-    mkdirSync(currentUidImagePath);
+  const currentUidImagePath = await join(currentItemImagePath.value, props.uid);
+  if (!await exists(currentUidImagePath)) {
+    await mkdir(currentUidImagePath, { recursive: true });
   }
 };
 
@@ -247,7 +259,7 @@ const contextMenu = (event: MouseEvent) => {
         iconName: ['iconfont', 'icon-folderOpen'],
         handler: () => {
           // TODO 兼容mac
-          shell.showItemInFolder(targetImg.src.replace('atom:///', ''));
+          openShell(targetImg.src.replace('atom:///', ''), 'folder');
         }
       };
       menuList.unshift(openFolderMenuItem);
@@ -257,7 +269,7 @@ const contextMenu = (event: MouseEvent) => {
         iconName: ['iconfont', 'icon-tupian'],
         handler: () => {
           // TODO 兼容mac
-          shell.openPath(targetImg.src.replace('atom:///', ''));
+          openShell(targetImg.src.replace('atom:///', ''));
         }
       };
       menuList.unshift(openImageMenuItem);

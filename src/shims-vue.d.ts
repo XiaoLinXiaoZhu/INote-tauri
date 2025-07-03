@@ -7,3 +7,9 @@ declare module '*.vue' {
 
 /** 是否是暗黑模式，根据此处去做兼容 */
 declare const isDark: () => boolean;
+
+declare global {
+  interface Window {
+    __TAURI__?: any;
+  }
+}

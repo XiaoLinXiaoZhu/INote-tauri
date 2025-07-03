@@ -23,7 +23,8 @@
         "resizable": true,
         "title": "I便笺"
       }
-    ]
+    ],
+    "withGlobalTauri": false
   },
   "bundle": {
     "active": true,
@@ -39,6 +40,16 @@
   "plugins": {
     "sql": {
       "preload": ["sqlite:i-notes.db"]
+    },
+    "updater": {
+      "active": false,
+      "endpoints": [],
+      "dialog": true,
+      "pubkey": ""
+    },
+    "os": {},
+    "shell": {
+      "open": true
     }
   }
 }

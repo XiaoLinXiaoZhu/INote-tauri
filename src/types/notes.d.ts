@@ -1,5 +1,3 @@
-import { Model } from 'sequelize';
-
 /**
  * model需要的类型
  */
@@ -18,23 +16,26 @@ export interface DBNotesType {
   readonly uid: string;
   className: string;
   content: string;
-  interception: string;
   markdown: string;
-  readonly createdAt: Date;
+  interception: string;
+  createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * 列表中的
- *
- * remove 是否已删除
+ * 数据库笔记列表类型
  */
-export interface DBNotesListType extends DBNotesType {
-  remove?: boolean;
+export interface DBNotesListType {
+  uid: string;
+  className: string;
+  content: string;
+  markdown: string;
+  interception: string;
+  createdAt: Date;
+  updatedAt: Date;
+  remove?: boolean; // 添加 remove 属性
 }
 
-/**
- * typescript创建model写法
- * https://stackoverflow.com/questions/60014874/how-to-use-typescript-with-sequelize
- */
-export interface NotesModel extends Model<NotesModelType>, NotesModelType {}
+// 移除 Sequelize 相关类型定义
+// 保留兼容性，但不再依赖 Sequelize
+export type NotesModel = DBNotesType;

@@ -3,13 +3,27 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main"
+    "*"
   ],
   "permissions": [
     "core:default",
+    "core:window:default",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-set-always-on-top",
+    "core:webview:default",
+    "core:webview:allow-create-webview-window",
     "sql:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
     "fs:default",
+    "fs:allow-read-dir",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
     "dialog:default",
-    "log:default"
+    "log:default",
+    "updater:default",
+    "process:default"
   ]
 }

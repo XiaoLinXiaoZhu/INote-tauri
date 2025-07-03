@@ -1,36 +1,42 @@
+import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { join } from '@tauri-apps/api/path';
+import { dirname } from 'path-browserify';
 import { ComponentPublicInstance } from 'vue';
-import dayjs from 'dayjs';
-import fs from 'fs-extra';
-import os from 'os';
-import { remote } from 'electron';
-import { join, dirname } from 'path';
-import useMessage from '@/components/IMessage';
+import { getVersion } from '@tauri-apps/api/app';
 import { constErrorLogPath } from '@/config';
 
-function getShortStack(stack?: string): string {
-  const splitStack = stack?.split('\n    ');
-  if (!splitStack) return '';
-  const newStack: string[] = [];
-  for (const line of splitStack) {
-    // 其他信息
-    if (line.includes('bundler')) continue;
+// 格式化错误堆栈
+export function formatComponentName(vm: ComponentPublicInstance | null): string {
+  if (vm === null) return '';
+  if (vm.$root === vm) return 'root';
 
-    // 只保留错误文件信息
-    if (line.includes('?!.')) {
-      newStack.push(line.replace(/webpack-internal:\/\/\/\.\/node_modules\/.+\?!/, ''));
-    } else {
-      newStack.push(line);
-    }
-  }
+  const options = vm.$options;
+  const name = options.name || options.__file || options._componentTag;
+  return name ? `component: <${name}>` : 'anonymous component';
+}
+
+export function formatStack(stack: string): string {
+  const regex = /at .* \(.*\/([^\/]+\/[^\/]+)\)/g;
+  const newStack = stack.split('\n').map(v => {
+    return v.replace(regex, 'at $1');
+  });
+  
   // 转换string
   return newStack.join('\n    ');
 }
 
-export const errorLogPath = join(dirname(remote.app.getPath('exe')), constErrorLogPath);
+// 在 Tauri 中获取错误日志路径
+export const getErrorLogPath = async () => {
+  // 使用 Tauri 的 API 获取适当的目录路径
+  const appDir = await dirname(await join('$APP', 'config'));
+  return await join(appDir, constErrorLogPath);
+};
 
-export default function(error: unknown, vm: ComponentPublicInstance | null, info: string): void {
+export default async function(error: unknown, vm: ComponentPublicInstance | null, info: string): Promise<void> {
   const { message, stack } = error as Error;
-  const { electron, chrome, node, v8 } = process.versions;
+  
+  // 替换 process.versions 为 Tauri 的版本信息
+  const appVersion = await getVersion();
   const { outerWidth, outerHeight, innerWidth, innerHeight } = window;
   const { width, height } = window.screen;
 
@@ -38,33 +44,32 @@ export default function(error: unknown, vm: ComponentPublicInstance | null, info
   const errorInfo = {
     errorInfo: info,
     errorMessage: message,
-    errorStack: getShortStack(stack)
-  };
-
-  // electron
-  const electronInfo = { electron, chrome, node, v8 };
-
-  // 浏览器窗口信息
-  const browserInfo = { outerWidth, outerHeight, innerWidth, innerHeight };
-
-  const errorLog = {
-    versions: remote.app.getVersion(),
-    date: dayjs().format('YYYY-MM-DD HH:mm'),
-    error: errorInfo,
-    electron: electronInfo,
-    window: {
-      type: os.type(),
-      platform: os.platform()
+    componentName: formatComponentName(vm),
+    stack: formatStack(stack || ''),
+    browserInfo: {
+      appVersion,
+      userAgent: navigator.userAgent,
+      winSize: {
+        outer: [outerWidth, outerHeight],
+        inner: [innerWidth, innerHeight],
+        screen: [width, height]
+      },
+      location: window.location.href
     },
-    browser: browserInfo,
-    screen: { width, height }
+    date: new Date().toLocaleString()
   };
 
-  useMessage('程序出现异常', 'error');
-
-  if (process.env.NODE_ENV === 'production') {
-    fs.writeFileSync(errorLogPath, JSON.stringify(errorLog) + '\n', { flag: 'a' });
-  } else {
-    console.log(errorInfo.errorStack);
+  const errorMessage = JSON.stringify(errorInfo, null, 4);
+  console.error(errorMessage);
+  
+  try {
+    // 仅在生产环境下写入日志文件
+    const isDevelopment = import.meta.env.MODE !== 'production';
+    if (!isDevelopment) {
+      const errorLogPath = await getErrorLogPath();
+      await writeTextFile(errorLogPath, errorMessage, { append: true });
+    }
+  } catch (e) {
+    console.error('写入错误日志失败', e);
   }
 }

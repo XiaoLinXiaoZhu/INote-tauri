@@ -1,95 +1,72 @@
-import { Task } from 'electron';
+// 注意：此文件已从 Electron 迁移到 Tauri
+// 某些功能在 Tauri 中的实现方式不同
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = import.meta.env.MODE !== 'production';
 
 /**
- * task事件
+ * Tauri 应用配置
+ * 注意：Tauri 中的任务栏和系统集成方式与 Electron 不同
  */
-export const userTasks: Task[] = [
-  {
-    program: process.execPath,
-    arguments: '--editor',
-    iconPath: process.execPath,
-    iconIndex: 0,
-    title: '新建便笺',
-    description: '创建新的便笺'
-  },
-  {
-    program: process.execPath,
-    arguments: '--setting',
-    iconPath: process.execPath,
-    iconIndex: 0,
-    title: '设置',
-    description: '打开设置'
-  }
-];
+
+// TODO: 在 Tauri 中重新实现系统任务栏集成
+// Tauri 使用不同的方式处理系统集成功能
 
 /**
- * 主要禁用
- * - F11 禁用全屏放大
- * - CTRL+R 禁用刷新
- * - CTRL+SHIFT+R 禁用刷新
+ * 禁用的快捷键配置
+ * 在 Tauri 中，快捷键处理方式不同，需要在 Rust 端配置
  */
 export const disabledKeys = () => {
   const devShortcuts = ['F11', 'Ctrl+R', 'Ctrl+SHIFT+R'];
-
   const shortcuts = ['Ctrl+N', 'SHIFT+F10', 'Ctrl+SHIFT+I'];
-
   const exportKeys = isDevelopment ? shortcuts : [...devShortcuts, ...shortcuts];
   return exportKeys;
 };
 
 /**
- * BrowserWindow的配置项
- * @param type 单独给编辑窗口的配置
+ * Tauri 窗口配置
+ * 注意：在 Tauri 中，窗口配置主要在 tauri.conf.json 中设置
  */
-export const browserWindowOption = (type?: 'editor'): Electron.BrowserWindowConstructorOptions => {
-  const devWid = isDevelopment ? 950 : 0;
-  const devHei = isDevelopment ? 600 : 0;
+export interface TauriWindowOptions {
+  width: number;
+  height: number;
+  minWidth: number;
+  minHeight: number;
+  resizable: boolean;
+  transparent?: boolean;
+  decorations?: boolean;
+}
 
-  // 底部icon: 40*40
+export const getWindowOptions = (type?: 'editor'): TauriWindowOptions => {
   const editorWindowOptions = {
-    width: devWid || 290,
-    height: devHei || 320,
-    minWidth: 290
-  };
-  const commonOptions: Electron.BrowserWindowConstructorOptions = {
+    width: isDevelopment ? 950 : 290,
+    height: isDevelopment ? 600 : 320,
+    minWidth: 290,
     minHeight: 48,
-    frame: false,
-    hasShadow: true,
-    transparent: true,
-    fullscreen: false,
-    webPreferences: {
-      enableRemoteModule: true,
-      nodeIntegration: true,
-      contextIsolation: false,
-      webSecurity: false
-    }
+    resizable: true,
+    decorations: false,
+    transparent: true
   };
-  // 兼容mac
-  if (process.platform === 'darwin') {
-    commonOptions.frame = true;
-    commonOptions.transparent = false;
-    commonOptions.backgroundColor = '#ffffff';
-  }
-  if (!type) {
-    return {
-      width: devWid || 350,
-      height: devHei || 600,
-      minWidth: 320,
-      ...commonOptions,
-      resizable: isDevelopment ? true : false
-    };
-  }
-  return {
-    ...editorWindowOptions,
-    ...commonOptions
+
+  const mainWindowOptions = {
+    width: isDevelopment ? 950 : 350,
+    height: isDevelopment ? 600 : 600,
+    minWidth: 320,
+    minHeight: 48,
+    resizable: isDevelopment ? true : false,
+    decorations: false,
+    transparent: true
   };
+
+  return type === 'editor' ? editorWindowOptions : mainWindowOptions;
 };
 
 /**
- * 开发环境: http://localhost:55225
- *
- * 正式环境: file://${__dirname}/index.html
+ * 应用 URL 配置
+ * 在 Tauri 中，开发环境和生产环境的 URL 处理方式不同
  */
-export const winURL = isDevelopment ? 'http://localhost:55225' : `file://${__dirname}/index.html`;
+export const getAppUrl = () => {
+  return isDevelopment ? 'http://localhost:1421' : 'tauri://localhost';
+};
+
+// 导出开发环境标识
+export { isDevelopment };

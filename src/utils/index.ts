@@ -1,5 +1,5 @@
-import { browserWindowOption, winURL } from '@/config';
-import { BrowserWindow, remote } from 'electron';
+import { winURL, isDevelopment } from '@/config';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { enc, AES, mode, pad } from 'crypto-js';
 
 type FunctionalControl = (this: any, fn: any, delay?: number) => (...args: any) => void;
@@ -32,29 +32,68 @@ export const throttle: ThrottleEvent = function(fn, delay = 500) {
 
 // 创建窗口
 export const createBrowserWindow = (
-  bwopt = {} as Electron.BrowserWindowConstructorOptions,
+  bwopt = {} as any,
   url = '/',
   devTools = false
-): BrowserWindow | null => {
-  let childrenWindow: BrowserWindow | null;
-  childrenWindow = new remote.BrowserWindow(bwopt);
-
-  if (process.env.NODE_ENV === 'development' && devTools) {
-    childrenWindow.webContents.openDevTools();
+): any => {
+  // 在 Tauri 中使用 WebviewWindow
+  const windowLabel = 'window_' + Date.now();
+  console.log('创建窗口:', windowLabel, 'URL:', url, '配置:', bwopt);
+  
+  try {
+    const webview = new WebviewWindow(windowLabel, {
+      url: `${winURL}/#${url}`,
+      width: bwopt.width || 800,
+      height: bwopt.height || 600,
+      resizable: bwopt.resizable !== false,
+      title: bwopt.title || 'iNotes',
+      center: true,
+      skipTaskbar: bwopt.skipTaskbar || false,
+      alwaysOnTop: bwopt.alwaysOnTop || false,
+      decorations: bwopt.decorations !== false,
+      transparent: bwopt.transparent || false
+    });
+    
+    console.log('窗口创建成功:', windowLabel);
+    
+    if (isDevelopment && devTools) {
+      console.log('开发模式下创建窗口:', windowLabel);
+    }
+    
+    // 返回一个模拟的 BrowserWindow 对象
+    return {
+      loadURL: (url: string) => console.log('loadURL called with:', url),
+      on: (event: string, callback: () => void) => {
+        if (event === 'closed') {
+          webview.once('tauri://close-requested', callback);
+        }
+      },
+      close: () => webview.close(),
+      show: () => webview.show(),
+      hide: () => webview.hide(),
+      webContents: {
+        openDevTools: () => console.log('DevTools not available in Tauri')
+      }
+    } as any;
+  } catch (error) {
+    console.error('创建窗口失败:', error);
+    return null;
   }
-  childrenWindow.loadURL(`${winURL}/#${url}`);
-  childrenWindow.on('closed', () => {
-    childrenWindow = null;
-  });
-  // childrenWindow.webContents.openDevTools();
-  return childrenWindow;
 };
 
 // 过渡关闭窗口
-export const transitCloseWindow = (): void => {
+export const transitCloseWindow = async (): Promise<void> => {
   document.querySelector('#app')?.classList.remove('app-show');
   document.querySelector('#app')?.classList.add('app-hide');
-  remote.getCurrentWindow().close();
+  // 在 Tauri 中关闭当前窗口
+  try {
+    const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+    setTimeout(() => {
+      getCurrentWebviewWindow().close();
+    }, 300); // 等待动画完成
+  } catch (error) {
+    console.error('关闭窗口失败:', error);
+  }
 };
 
 // uuid
@@ -97,7 +136,7 @@ export const algorithm = {
 };
 
 export interface TwiceHandle {
-  keydownInterval: NodeJS.Timer | null;
+  keydownInterval: ReturnType<typeof setInterval> | null;
   intervalCount: number;
   keydownCount: number;
   start: (fn: () => void) => void;
@@ -115,15 +154,19 @@ export const twiceHandle: TwiceHandle = {
       this.intervalCount += 1;
       this.keydownInterval = setInterval(() => {
         if (this.intervalCount > 5) {
-          clearInterval(this.keydownInterval as NodeJS.Timer);
-          this.keydownInterval = null;
+          if (this.keydownInterval) {
+            clearInterval(this.keydownInterval);
+            this.keydownInterval = null;
+          }
           this.intervalCount = 0;
           this.keydownCount = 0;
         } else {
           this.intervalCount += 1;
           if (this.keydownCount >= 2) {
-            clearInterval(this.keydownInterval as NodeJS.Timer);
-            this.keydownInterval = null;
+            if (this.keydownInterval) {
+              clearInterval(this.keydownInterval);
+              this.keydownInterval = null;
+            }
             this.intervalCount = 0;
             this.keydownCount = 0;
             fn();
@@ -138,7 +181,7 @@ export const twiceHandle: TwiceHandle = {
   }
 };
 
-export const openImageAsNewWindow = (img: Element) => {
+export const openImageAsNewWindow = async (img: Element) => {
   const devicePixelRatio = window.devicePixelRatio;
   const { availWidth, availHeight } = window.screen;
   const naturalWidth = (img as HTMLImageElement).naturalWidth / devicePixelRatio;
@@ -148,15 +191,24 @@ export const openImageAsNewWindow = (img: Element) => {
   const winOptWidth = winWidth > availWidth ? availWidth : winWidth;
   const winOptHeight = winHeight > availHeight ? availHeight : winHeight;
 
-  createBrowserWindow(
-    {
-      ...browserWindowOption(),
+  // 使用 Tauri 的 WebviewWindow 创建图片预览窗口
+  const windowLabel = 'image_preview_' + Date.now();
+  try {
+    const webview = new WebviewWindow(windowLabel, {
+      url: `${winURL}/#/image-preview?src=${encodeURIComponent((img as HTMLImageElement).src)}`,
       width: winOptWidth,
       height: winOptHeight,
-      minWidth: winWidth,
-      minHeight: winHeight
-    },
-    `/image-preview?src=${(img as HTMLImageElement).src}`,
-    false
-  );
+      minWidth: 500,
+      minHeight: 300,
+      resizable: true,
+      title: '图片预览',
+      center: true,
+      decorations: true
+    });
+    
+    return webview;
+  } catch (error) {
+    console.error('创建图片预览窗口失败:', error);
+    return null;
+  }
 };

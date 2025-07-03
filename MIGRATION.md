@@ -28,113 +28,158 @@
 
 ## 新的依赖项
 
-### 前端依赖
+- `@tauri-apps/api` - Tauri API 客户端库
+- `@tauri-apps/plugin-sql` - Tauri SQL 插件，替代 Sequelize
+- `@tauri-apps/plugin-fs` - 文件系统操作
+- `@tauri-apps/plugin-dialog` - 对话框操作
+- `@tauri-apps/plugin-updater` - 自动更新
+- `@tauri-apps/plugin-process` - 进程管理
+- `@tauri-apps/plugin-shell` - Shell 命令执行
+
+## 已完成的迁移任务
+
+1. **配置迁移**
+   - 更新 `tauri.conf.json` 配置
+   - 配置 `vite.config.ts`
+   - 调整 TypeScript 配置
+
+2. **API 替换**
+   - 创建 `src/utils/electronAdapter.ts` 适配层
+   - 用 Tauri API 替换 Electron/Node.js API
+   - 迁移 IPC 通信到 Tauri 事件系统
+
+3. **数据库迁移**
+   - 从 Sequelize 迁移到 `tauri-plugin-sql`
+   - 创建兼容层保持原有数据结构和 API
+
+4. **文件功能迁移**
+   - 使用 `tauri-plugin-fs` 代替 `fs-extra`
+   - 路径处理替换为 Tauri 路径 API
+
+5. **窗口管理迁移**
+   - 使用 `WebviewWindow` 替换 `BrowserWindow`
+   - 重新实现窗口创建、关闭、通信等功能
+
+6. **更新功能迁移**
+   - 使用 `tauri-plugin-updater` 替换 `electron-updater`
+   - 实现更新进度和通知功能
+
+7. **Less 配置优化**
+   - 分离变量到 `variables.less` 文件
+   - 调整 Vite CSS 预处理配置
+   - 解决 Less 编译超时问题
+
+## 常见问题与解决方案
+
+### Tauri SQL 权限问题
+
+**问题**: `sql.execute not allowed. Permissions associated with this command: sql:allow-execute`
+
+**解决方案**:
+在 `src-tauri/capabilities/default.json` 中添加具体的 SQL 权限：
 ```json
 {
-  "@tauri-apps/api": "^2.6.0",
-  "@tauri-apps/plugin-sql": "2.3.0",
-  "@tauri-apps/plugin-fs": "2.4.0",
-  "@tauri-apps/plugin-dialog": "2.3.0",
-  "vite": "^7.0.0",
-  "vue-tsc": "^2.2.12"
+  "permissions": [
+    "core:default",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-execute", 
+    "sql:allow-select"
+  ]
 }
 ```
 
-### 开发工具
-```json
-{
-  "@tauri-apps/cli": "^2.6.2",
-  "@vitejs/plugin-vue": "^5.2.4",
-  "typescript": "^5.8.3"
+### Buffer 未定义错误
+
+**问题**: `ReferenceError: Buffer is not defined` 错误，通常由 Sequelize 等 Node.js 依赖引起。
+
+**解决方案**:
+1. 完全移除 Sequelize 相关依赖
+2. 在 `vite.config.ts` 中添加 Node.js polyfill：
+```js
+define: {
+  global: 'globalThis',
 }
 ```
+3. 更新所有使用 Sequelize 的文件，替换为 Tauri SQL 插件
 
-## 配置文件更新
+### 数据库迁移
 
-### 1. package.json 脚本
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc && vite build",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
-  }
-}
-```
+**完整迁移步骤**:
+1. 从 `package.json` 移除 `sequelize`、`sqlite3`、`@types/sequelize`
+2. 更新 `src/types/notes.d.ts`，移除 Sequelize Model 依赖
+3. 修改 `src/views/index/components/Search.vue`，移除 Sequelize Op 操作符
+4. 使用 `noteService.searchNotes()` 替代 Sequelize 查询
 
-### 2. Vite 配置 (vite.config.ts)
-- 配置了 Tauri 特定的选项
-- 添加了 Less 全局变量支持
-- 设置了路径别名
+### process 未定义错误
 
-### 3. Tauri 配置 (src-tauri/tauri.conf.json)
-- 配置了应用基本信息
-- 设置了窗口属性
-- 添加了 SQL 插件支持
+**问题**: 在浏览器环境中运行时出现 `Uncaught ReferenceError: process is not defined` 错误。
 
-## 数据库迁移
+**原因**: 
+- `process` 是 Node.js 环境中的全局变量，在浏览器环境中不存在
+- Tauri 使用标准的 Web API 而不是 Node.js API
 
-### 之前 (Electron + Sequelize)
+**解决方案**:
+1. 使用 `import.meta.env` 替代 `process.env`
+2. 使用 `@tauri-apps/plugin-os` 代替 `process.platform`
+3. 替换所有 Node.js 特定的 API 为 Web API 或 Tauri API
+
+示例:
 ```typescript
-import { sequelizeInit } from './service/initSequelize';
-sequelizeInit();
+// 旧代码
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const isWindows = process.platform === 'win32';
+
+// 新代码
+const isDevelopment = import.meta.env.MODE !== 'production';
+import { platform } from '@tauri-apps/plugin-os';
+const isWindows = await platform() === 'windows';
 ```
 
-### 现在 (Tauri + SQL Plugin)
-```typescript
-import { noteService } from '@/service/tauriNoteService';
-noteService.initialize().catch(console.error);
+### Less 编译超时问题
+
+**问题**: Vite 处理 Less 文件时出现超时错误
+```
+[vite] Internal server error: [less] timed-out
 ```
 
-## 新增功能
+**解决方案**:
+1. 在 `vite.config.ts` 中增加超时设置
+2. 分离 Less 变量定义到单独文件
+3. 使用环境变量控制超时时间
+4. 创建优化的启动脚本
 
-### 1. Tauri 数据库服务
-- 创建了 `tauriNoteService.ts` 用于 SQLite 数据库操作
-- 支持 CRUD 操作和搜索功能
-
-### 2. 类型安全
-- 更新到最新的 TypeScript 配置
-- 添加了 Vite 环境变量类型定义
-
-## 启动命令
-
-### 开发模式
-```bash
-bun run tauri:dev
+示例配置:
+```js
+css: {
+  preprocessorOptions: {
+    less: {
+      javascriptEnabled: true,
+      additionalData: `@import "./variables.less";`,
+      timeout: 120000, // 2分钟超时
+      paths: [resolve(__dirname, './src/less')],
+    },
+  },
+},
 ```
 
-### 构建生产版本
-```bash
-bun run tauri:build
-```
+### 构建性能优化
 
-### 仅启动前端开发服务器
-```bash
-bun run dev
-```
+为提高大型项目的构建性能:
+1. 增加 Node.js 内存限制: `NODE_OPTIONS=--max-old-space-size=8192`
+2. 配置依赖预构建优化
+3. 使用 `cross-env` 确保跨平台兼容性
+4. 创建优化的启动脚本 `start-dev.bat`
 
-## 注意事项
+## 后续任务
 
-1. **端口配置**: 开发服务器现在运行在 `http://localhost:1421`
-2. **Less 变量**: 已配置自动导入全局 Less 变量
-3. **SQLite 数据库**: 数据库文件将保存为 `i-notes.db`
-4. **热重载**: Vite 提供了更快的热重载体验
+1. 进一步测试和优化所有功能
+2. 完善 Tauri 插件配置
+3. 优化构建和打包流程
+4. 更新文档和用户指南
 
-## 优势总结
+## 参考资源
 
-1. **性能提升**: Tauri 应用启动更快，包体积更小
-2. **开发体验**: Vite 提供了极快的热重载
-3. **安全性**: Tauri 提供了更好的安全性模型
-4. **现代化**: 使用了最新的工具链和技术栈
-5. **跨平台**: 保持了跨平台兼容性
-
-## 潜在问题和解决方案
-
-如果遇到问题：
-
-1. **端口冲突**: 修改 `vite.config.ts` 和 `tauri.conf.json` 中的端口
-2. **依赖问题**: 使用 `bun install` 重新安装依赖
-3. **构建错误**: 检查 TypeScript 类型错误
-
-迁移已成功完成！🎉
+- [Tauri 官方文档](https://tauri.studio/)
+- [Vite 官方文档](https://vitejs.dev/)
+- [Bun 官方文档](https://bun.sh/)

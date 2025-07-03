@@ -22,15 +22,16 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeMount, ref, watch } from 'vue';
-import { BrowserWindow, remote, ipcRenderer } from 'electron';
 import { useRoute, useRouter } from 'vue-router';
 import ILoading from '@/components/ILoading.vue';
 
-import { browserWindowOption } from '@/config';
+// 导入 Tauri API
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { listen, emit } from '@tauri-apps/api/event';
 import { twiceHandle, uuid } from '@/utils';
-import { Notes } from '@/service';
+import { noteService } from '@/service/tauriNoteService';
 
-import { createBrowserWindow, transitCloseWindow } from '@/utils';
+import { transitCloseWindow } from '@/utils';
 import { notesState } from '@/store/notes.state';
 import IDropBar from '@/components/IDropBar.vue';
 import ColorMask from './components/ColorMask.vue';
@@ -45,7 +46,11 @@ const IEditor = defineAsyncComponent({
 const showOptionsStatus = ref(false);
 const uid = ref('');
 const currentBgClassName = ref('');
-const currentWindow = remote.getCurrentWindow();
+const route = useRoute();
+const router = useRouter();
+// 获取当前窗口
+let currentWindow: WebviewWindow;
+
 // markdown
 const iEditorMarkdown = ref('');
 // html
@@ -62,85 +67,74 @@ const currentWindowBlurState = ref(false);
  */
 const lockState = ref(false);
 
-onBeforeMount(() => {
-  initEditorContent();
-  afterIpc();
+// 跟踪便签是否为新建且未保存
+const isNewNote = ref(false);
+
+onBeforeMount(async () => {
+  // 初始化数据库
+  await noteService.initialize();
+  
+  // 获取当前窗口
+  const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+  currentWindow = getCurrentWebviewWindow();
+  
+  await initEditorContent();
+  await afterIpc();
 });
 
 // 初始化编辑内容
 const initEditorContent = async () => {
-  const routeUid = useRoute().query.uid as string;
+  const routeUid = route.query?.uid as string;
   // 判断是编辑还是新增
   if (routeUid) {
     // 编辑
     uid.value = routeUid;
-    getCurUidItem(routeUid);
+    isNewNote.value = false; // 标记为编辑现有便签
+    await getCurUidItem(routeUid);
     return;
   }
 
   // 新建
   const uuidString = uuid();
   uid.value = uuidString;
-  useRouter().push({
+  isNewNote.value = true; // 标记为新建便签
+  await router.push({
     query: {
       uid: uuidString
     }
   });
-  const createDefault = {
-    uid: uid.value,
-    content: '',
-    markdown: '',
-    className: '',
-    interception: ''
-  };
-  Notes.create(createDefault, {
-    raw: true
-  });
-  // 监听创建便笺
-  ipcRenderer.send('createNewNote', createDefault);
+  
+  try {
+    await noteService.createNote({
+      uid: uid.value,
+      title: '',
+      content: '',
+      markdown: '',
+      color: '',
+    });
+    // 不在创建时立即发送事件，等用户输入内容后再发送
+    console.log('便签创建成功，uid:', uid.value);
+  } catch (error) {
+    console.error('创建便签失败:', error);
+  }
 };
 
 // 从数据库获取编辑的内容
 const getCurUidItem = async (uid: string) => {
-  const info = await Notes.findOne({
-    where: {
-      uid
-    }
-  });
-  if (!info) return;
-  currentBgClassName.value = info.className;
-  iEditorHtml.value = info.content;
-  iEditorMarkdown.value = info.markdown;
+  try {
+    const info = await noteService.getNoteByUid(uid);
+    if (!info) return;
+    currentBgClassName.value = info.color || '';
+    iEditorHtml.value = info.content || '';
+    // 优先使用存储的 markdown，如果没有则使用 content
+    iEditorMarkdown.value = info.markdown || info.content || '';
+  } catch (error) {
+    console.error('获取便签失败:', error);
+  }
 };
 
 const clickOption = () => {
   showOptionsStatus.value = true;
-};
-
-let childrenWindow: BrowserWindow | null;
-
-/** 打开主页列表 */
-const openNotesList = () => {
-  let indexShowStatus = false;
-
-  // 判断列表窗口是否存在
-  ipcRenderer.send('whetherToOpen');
-  ipcRenderer.on('getWhetherToOpen', () => {
-    indexShowStatus = true;
-    return;
-  });
-  showOptionsStatus.value = false;
-
-  if (childrenWindow) {
-    childrenWindow = null;
-  }
-
-  setTimeout(() => {
-    // 如果窗口不在
-    if (!indexShowStatus) {
-      childrenWindow = createBrowserWindow(browserWindowOption(), '/');
-    }
-  }, 100);
 };
 
 /** 修改颜色背景 */
@@ -190,53 +184,65 @@ const updateData = async (updateType: 'className' | 'content') => {
     className: currentBgClassName.value,
     interception: interceptionHTML
   };
-  await Notes.update(dataJson, {
-    where: {
-      uid: uid.value
-    }
-  });
-
-  if (updateType === 'className') {
-    /**
-     * updateNoteItem_className
-     * 更新便笺内容
-     */
-    ipcRenderer.send('updateNoteItem_className', {
-      uid: uid.value,
-      className: currentBgClassName.value
+  
+  try {
+    await noteService.updateNoteByUid(uid.value, {
+      content: iEditorHtml.value,
+      markdown: iEditorMarkdown.value,
+      color: currentBgClassName.value
     });
-  } else {
-    dataJson.updatedAt = new Date();
-    // 更新便笺内容
-    ipcRenderer.send('updateNoteItem_content', dataJson);
+
+    if (updateType === 'className') {
+      /**
+       * updateNoteItem_className
+       * 更新便笺内容
+       */
+      emit('updateNoteItem_className', {
+        uid: uid.value,
+        className: currentBgClassName.value
+      });
+    } else {
+      dataJson.updatedAt = new Date();
+      
+      // 如果是新建便签且第一次有内容，发送创建事件
+      if (isNewNote.value && iEditorHtml.value.trim()) {
+        isNewNote.value = false; // 标记为已保存
+        emit('createNewNote', dataJson);
+      } else {
+        // 更新便笺内容
+        emit('updateNoteItem_content', dataJson);
+      }
+    }
+  } catch (error) {
+    console.error('更新便签失败:', error);
   }
 };
 
-const closeWindow = () => {
-  if (iEditorHtml.value) return;
-  // 如果是空就直接从数据库删除
-  Notes.destroy({
-    where: {
-      uid: uid.value
+const closeWindow = async () => {
+  // 如果是新建便签且没有内容，则删除
+  if (isNewNote.value && !iEditorHtml.value?.trim()) {
+    try {
+      await noteService.deleteNoteByUid(uid.value);
+      // 在关闭的时候如果没有内容就通知列表进行删除操作
+      emit('removeEmptyNoteItem', uid.value);
+    } catch (error) {
+      console.error('删除空便签失败:', error);
     }
-  }).then(() => {
-    // 在关闭的时候如果没有内容就通知列表进行删除操作
-    ipcRenderer.send('removeEmptyNoteItem', uid.value);
-  });
+  }
 };
 
 /**
  * 此处通信便笺列表，如果接收到删除的消息就退出
- *
- * 场景：如果打开窗口就进行关闭
  */
-const afterIpc = () => {
-  remote.ipcMain.once(`deleteActiveItem_${uid.value}`, () => {
+const afterIpc = async () => {
+  // 使用 Tauri 事件替代 ipcMain
+  await listen(`deleteActiveItem_${uid.value}`, () => {
     transitCloseWindow();
   });
-  remote.ipcMain.on(`${uid.value}_toOpen`, e => {
+  
+  await listen(`${uid.value}_toOpen`, () => {
     currentWindow.show();
-    e.sender.send(`get_${uid.value}_toOpen`);
+    emit(`get_${uid.value}_toOpen`);
   });
 };
 
@@ -285,11 +291,11 @@ const currentWindowFocusHandle = () => {
   currentWindowBlurState.value = false;
 };
 
-const immersionHandle = () => {
+const immersionHandle = async () => {
   if (notesState.value.switchStatus.autoNarrow) {
-    currentWindow.on('blur', currentBlurHandle);
-
-    currentWindow.on('focus', currentWindowFocusHandle);
+    // 使用 Tauri 事件监听窗口焦点变化
+    await listen('tauri://blur', currentBlurHandle);
+    await listen('tauri://focus', currentWindowFocusHandle);
 
     document.addEventListener('keydown', e => {
       if (e.keyCode === 27) {
@@ -302,8 +308,7 @@ const immersionHandle = () => {
   } else {
     // 不在沉浸模式下取消所有功能以及事件
     currentWindowBlurState.value = false;
-    currentWindow.off('blur', currentBlurHandle);
-    currentWindow.off('focus', currentWindowFocusHandle);
+    // 注意：在 Tauri 中我们无法直接移除事件监听，但这里我们可以忽略回调
   }
 };
 

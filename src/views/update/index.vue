@@ -6,12 +6,15 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { ipcRenderer } from 'electron';
+import { listen } from '@tauri-apps/api/event';
+
 const percentage = ref(0);
 
-onMounted(() => {
-  ipcRenderer.on('downloadProgress', (e, arg) => {
-    percentage.value = parseInt(arg.percent);
+onMounted(async () => {
+  // 监听 Tauri 的更新进度事件
+  await listen('update-download-progress', (event) => {
+    const progress = event.payload as { percent: number };
+    percentage.value = Math.round(progress.percent);
   });
 });
 </script>

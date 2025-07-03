@@ -1,77 +1,80 @@
-import { autoUpdater } from 'electron-updater';
-import { dialog, BrowserWindow } from 'electron';
-import path from 'path';
-import log from 'electron-log';
-import { winURL } from './config';
+// 注意：此文件已从 Electron 迁移到 Tauri
+// Tauri 中的自动更新功能使用不同的实现方式
 
-const isDevelopment = process.env.NODE_ENV === 'development';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 
-if (isDevelopment) {
-  autoUpdater.updateConfigPath = path.join(__dirname, '../dev-app-update.yml');
-}
-export default () => {
-  let win = null;
+const isDevelopment = import.meta.env.MODE === 'development';
 
-  // 设置自动下载
-  autoUpdater.autoDownload = false;
-
-  // 检测是否有新版本
-  autoUpdater.checkForUpdates();
-
-  autoUpdater.on('checking-for-update', res => {
-    log.info('获取版本信息:' + res);
-  });
-
-  autoUpdater.on('update-not-available', res => {
-    log.info('没有可更新版本:' + res);
-  });
-
-  autoUpdater.on('update-available', res => {
-    dialog
-      .showMessageBox({
-        type: 'info',
-        title: '软件更新',
-        message: '发现新版本, 确定更新?',
-        buttons: ['确定', '取消']
-      })
-      .then(resp => {
-        if (resp.response == 0) {
-          createWindow();
-          autoUpdater.downloadUpdate();
-        }
-      });
-  });
-
-  async function createWindow() {
-    win = new BrowserWindow({
-      width: 300,
-      height: 300,
-      title: '七鹊',
-      frame: false,
-      transparent: true,
-      maximizable: false,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: true
-      }
-    });
-    win.loadURL(`${winURL}/#/update`);
+/**
+ * Tauri 自动更新器
+ * 在 Tauri 中，更新功能需要在 tauri.conf.json 中配置 updater 插件
+ */
+export default async () => {
+  // 在开发环境中跳过更新检查
+  if (isDevelopment) {
+    console.log('开发环境，跳过更新检查');
+    return;
   }
 
-  autoUpdater.on('download-progress', res => {
-    log.info('下载监听:' + res);
-    win.webContents.send('downloadProgress', res);
-  });
+  try {
+    console.log('检查更新...');
+    
+    // 检查是否有新版本
+    const update = await check();
+    
+    if (update?.available) {
+      console.log('发现新版本:', update.version);
+      
+      // 询问用户是否要更新
+      const shouldInstall = window.confirm(
+        `发现新版本 ${update.version}\n\n更新内容：\n${update.body}\n\n是否立即更新？`
+      );
+      
+      if (shouldInstall) {
+        console.log('开始下载更新...');
+        
+        // 安装更新
+        await update.downloadAndInstall();
+        
+        // 重启应用
+        await relaunch();
+      }
+    } else {
+      console.log('已是最新版本');
+    }
+  } catch (error) {
+    console.error('更新检查失败:', error);
+    
+    // 在生产环境中，可以选择性地显示错误信息
+    if (!isDevelopment) {
+      window.alert('检查更新时出现错误，请手动检查是否有新版本可用。');
+    }
+  }
+};
 
-  autoUpdater.on('update-downloaded', () => {
-    dialog
-      .showMessageBox({
-        title: '下载完成',
-        message: '最新版本已下载完成, 退出程序进行安装'
-      })
-      .then(() => {
-        autoUpdater.quitAndInstall();
-      });
-  });
+/**
+ * 手动检查更新
+ * 提供给用户手动触发更新检查的函数
+ */
+export const manualCheckUpdate = async () => {
+  try {
+    const update = await check();
+    
+    if (update?.available) {
+      const shouldInstall = window.confirm(
+        `发现新版本 ${update.version}\n\n更新内容：\n${update.body}\n\n是否立即更新？`
+      );
+      
+      if (shouldInstall) {
+        await update.downloadAndInstall();
+        await relaunch();
+      }
+    } else {
+      window.alert('当前已是最新版本');
+    }
+  } catch (error) {
+    console.error('手动检查更新失败:', error);
+    window.alert('检查更新失败，请稍后重试。');
+  }
 };

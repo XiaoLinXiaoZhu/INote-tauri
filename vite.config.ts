@@ -1,6 +1,13 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import fs from 'fs'
+
+// 从环境变量读取超时设置，默认为2分钟
+const CSS_TIMEOUT = parseInt(process.env.VITE_CSS_TIMEOUT || '120000', 10);
+
+// 读取 Less 变量文件
+const lessVariables = fs.readFileSync(resolve(__dirname, './src/less/variables.less'), 'utf-8');
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,16 +29,42 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      'electron': resolve(__dirname, './src/utils/electronAdapter.ts'),
     },
+  },
+  
+  // 添加 Node.js polyfill
+  define: {
+    global: 'globalThis',
   },
   
   css: {
     preprocessorOptions: {
       less: {
         javascriptEnabled: true,
-        additionalData: `@import "@/less/index.less";`,
+        // 直接使用变量文件内容作为 additionalData
+        additionalData: `${lessVariables}`,
+        // 使用环境变量中的超时设置
+        timeout: CSS_TIMEOUT,
+        // 增加模块搜索路径
+        paths: [resolve(__dirname, './src/less')],
       },
     },
+  },
+  
+  // 增加 esbuild 配置，提高大型项目的构建性能
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' },
+  },
+  
+  // 优化依赖预构建
+  optimizeDeps: {
+    include: [
+      '@tauri-apps/api',
+      'vue',
+      'vue-router',
+      'crypto-js',
+    ],
   },
   
   // to make use of `TAURI_DEBUG` and other env variables

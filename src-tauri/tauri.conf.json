@@ -1,0 +1,44 @@
+{
+  "productName": "I便笺",
+  "version": "0.6.1",
+  "identifier": "com.inotes.heiyehk",
+  "build": {
+    "beforeBuildCommand": "bun run build",
+    "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:1421",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "label": "main",
+        "fullscreen": false,
+        "height": 600,
+        "width": 400,
+        "minHeight": 400,
+        "minWidth": 300,
+        "resizable": true,
+        "title": "I便笺"
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:i-notes.db"]
+    }
+  }
+}

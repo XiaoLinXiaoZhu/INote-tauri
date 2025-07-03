@@ -2,9 +2,10 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
 import outputErrorLog from '@/utils/errorLog';
-import { sequelizeInit } from './service/initSequelize';
+import { noteService } from '@/service/tauriNoteService';
 
-sequelizeInit();
+// 初始化 Tauri 数据库服务
+noteService.initialize().catch(console.error);
 
 const app = createApp(App);
 app.directive('tip', (el, { value }) => {
@@ -30,7 +31,7 @@ app.directive('mask', (el: HTMLLIElement) => {
   }
 });
 
-if (process.env.NODE_ENV !== 'development') {
+if (import.meta.env.MODE !== 'development') {
   app.config.errorHandler = outputErrorLog;
 }
 

@@ -29,7 +29,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      'electron': resolve(__dirname, './src/utils/electronAdapter.ts'),
+      // 移除了 electron adapter，现在直接使用 Tauri API
     },
   },
   

@@ -1,13 +1,13 @@
-# electron+vue3+ts
+# INote-tauri
 
-> 在Windows环境下，删除`node_modules`重新安装依赖的情况下，会导致`build`报错，需要使用`npm i`进行安装依赖。
-> In the Windows environment, deleting `node_modules` and reinstalling dependencies will cause `build` errors, and you need to use `npm i` to install dependencies.
+> 基于 Tauri + Vue3 + TypeScript 的现代化便笺应用
+> A modern sticky notes application built with Tauri + Vue3 + TypeScript
 
 <div align="center">
 <img src="https://img.shields.io/badge/vue-3.2.6-green"/>
-<img src="https://img.shields.io/badge/electron-%5E11.5.0-brightgreen"/>
-<img src="https://img.shields.io/badge/typescript-~4.4.4-yellowgreen"/>
-<img src="https://img.shields.io/badge/sqlite3-%5E5.0.2-orange"/>
+<img src="https://img.shields.io/badge/tauri-2.0-brightgreen"/>
+<img src="https://img.shields.io/badge/typescript-~5.0-yellowgreen"/>
+<img src="https://img.shields.io/badge/sqlite-built--in-orange"/>
 <img src="https://img.shields.io/badge/vditor-%5E3.8.10-blue"/>
 </div>
 
@@ -19,14 +19,14 @@
 ### Mac
 <img width="50%" src="https://user-images.githubusercontent.com/33891067/128463221-9d0ebff0-f706-44e2-8007-964e63d43424.png" />
 
-## 启动
-```
-yarn serve
+## 启动开发环境
+```bash
+npm run tauri dev
 ```
 
-## 打包
-```
-yarn build
+## 构建发布版本
+```bash
+npm run tauri build
 ```
 
 ## 教程

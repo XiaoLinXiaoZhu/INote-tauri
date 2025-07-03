@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onBeforeMount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ILoading from '@/components/ILoading.vue';
 

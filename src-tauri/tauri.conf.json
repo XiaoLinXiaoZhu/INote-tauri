@@ -1,7 +1,7 @@
 {
   "productName": "I便笺",
-  "version": "0.6.1",
-  "identifier": "com.inotes.heiyehk",
+  "version": "1.0.0",
+  "identifier": "com.xlxz.inote",
   "build": {
     "beforeBuildCommand": "bun run build",
     "beforeDevCommand": "bun run dev",

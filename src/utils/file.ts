@@ -1,6 +1,8 @@
 /**
  * @see https://juejin.cn/post/6953177188262740005
  */
+// filetype 暂时保留但未使用，可能在未来的功能中需要
+/*
 const filetype: { [key: string]: string } = {
   '47494638': 'image/gif',
   '89504e47': 'image/png',
@@ -18,6 +20,7 @@ const filetype: { [key: string]: string } = {
   '52494646,4344': 'cda',
   '52494646,514c': 'qcp'
 };
+*/
 
 /**
  * 文件转buffer

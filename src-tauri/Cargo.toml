@@ -1,10 +1,10 @@
 [package]
 name = "i-notes"
-version = "0.6.1"
+version = "1.0.0"
 description = "I便笺拥有漂亮的过度效果，允许开启多个窗口方便在桌面端更方便的记录文字"
-authors = ["heiyehk"]
+authors = ["xlxz"]
 license = "MIT"
-repository = "https://github.com/heiyehk/electron-vue3-inote"
+repository = "https://github.com/XiaoLinXiaoZhu/INote-tauri"
 edition = "2021"
 rust-version = "1.77.2"
 

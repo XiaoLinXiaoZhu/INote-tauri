@@ -1,18 +1,18 @@
 {
   "name": "i-notes",
-  "version": "0.6.1",
+  "version": "1.0.0",
   "private": true,
-  "author": "heiyehk",
+  "author": "xlxz",
   "description": "I便笺拥有漂亮的过度效果，允许开启多个窗口方便在桌面端更方便的记录文字",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/heiyehk/electron-vue3-inote"
+    "url": "https://github.com/XiaoLinXiaoZhu/INote-tauri"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/heiyehk/electron-vue3-inote/issues",
-    "email": "heiyehk@foxmail.com"
+    "url": "https://github.com/XiaoLinXiaoZhu/INote-tauri/issues",
+    "email": "helloXLXZ233@gmail.com"
   },
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 VITE_CSS_TIMEOUT=120000 bunx --bun vite",

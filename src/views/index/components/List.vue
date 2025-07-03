@@ -52,7 +52,7 @@ const emits = defineEmits(['changeBlockState']);
 const viewNotesList = ref<DBNotesListType[]>([]);
 const deleteTipChecked: Ref<boolean | undefined> = ref(false);
 const deleteMessageShow = ref(false);
-const liRef = ref<HTMLLIElement[]>([]);
+// liRef 已移除，不再使用
 
 const rightClick = new CreateRightClick();
 
@@ -84,11 +84,7 @@ watch(
   }
 );
 
-// setLiRef 函数暂时保留但未使用
-const setLiRef = (el: HTMLLIElement) => {
-  console.log(el);
-  liRef.value.push(el);
-};
+// setLiRef 函数已移除，不再使用
 
 onMounted(async () => {
   // 监听来自编辑器的事件

@@ -49,4 +49,18 @@ const router = createRouter({
   routes
 });
 
+// 添加路由守卫用于调试
+router.beforeEach((to, from, next) => {
+  console.log('🚀 Navigating to:', to.path, 'from:', from.path);
+  next();
+});
+
+router.afterEach((to) => {
+  console.log('✅ Navigation completed to:', to.path);
+});
+
+router.onError((error) => {
+  console.error('❌ Router error:', error);
+});
+
 export default router;

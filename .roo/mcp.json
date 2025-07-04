@@ -7,7 +7,8 @@
         "@modelcontextprotocol/server-filesystem",
         "E:/_Project/"
       ],
-      "alwaysAllow": []
+      "alwaysAllow": [],
+      "disabled": true
     }
   }
 }

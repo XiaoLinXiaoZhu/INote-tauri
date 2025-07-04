@@ -4,8 +4,19 @@ import router from './router';
 import outputErrorLog from '@/utils/errorLog';
 import { noteService } from '@/service/tauriNoteService';
 
+console.log('🚀 Starting Vue application...');
+
 // 初始化 Tauri 数据库服务
-noteService.initialize().catch(console.error);
+console.log('🚀 Initializing database service...');
+noteService.initialize()
+  .then(() => {
+    console.log('✅ Database service initialized successfully');
+  })
+  .catch(error => {
+    console.error('❌ Failed to initialize database service:', error);
+  });
+
+console.log('🚀 Creating Vue app...');
 
 const app = createApp(App);
 app.directive('tip', (el, { value }) => {
@@ -36,3 +47,14 @@ if (import.meta.env.MODE !== 'development') {
 }
 
 app.use(router).mount('#app');
+
+console.log('🚀 Vue application mounted successfully');
+
+// 添加全局错误处理
+window.addEventListener('error', (event) => {
+  console.error('Global error caught:', event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+});

@@ -93,43 +93,46 @@ const initImagesCacheUrl = async () => {
 };
 
 const getLocalValue = async () => {
-  if (localStorage.getItem('notesState')) {
-    notesState.value = { ...notesState.value, ...JSON.parse(localStorage.getItem('notesState')!) };
-  } else {
-    notesState.value = { ...defaultNotesState };
+  try {
+    if (localStorage.getItem('notesState')) {
+      const savedState = JSON.parse(localStorage.getItem('notesState')!);
+      notesState.value = { ...defaultNotesState, ...savedState };
+    } else {
+      notesState.value = { ...defaultNotesState };
+    }
+    
     // 异步设置图片缓存路径
+    if (!notesState.value.imagesCacheUrl) {
+      notesState.value.imagesCacheUrl = await initImagesCacheUrl();
+      localStorage.setItem('notesState', JSON.stringify(notesState.value));
+    }
+  } catch (error) {
+    console.error('Failed to load local state:', error);
+    notesState.value = { ...defaultNotesState };
     notesState.value.imagesCacheUrl = await initImagesCacheUrl();
     localStorage.setItem('notesState', JSON.stringify(notesState.value));
-  }
-  
-  // 确保图片缓存路径已设置
-  if (!notesState.value.imagesCacheUrl) {
-    notesState.value.imagesCacheUrl = await initImagesCacheUrl();
   }
 };
 
 // 初始化
 getLocalValue();
 
-const initialNotesStateLocal = async () => {
-  await getLocalValue();
-  // 在 Tauri 中，我们不需要 IPC 通信来同步状态
-  // 状态管理完全在前端完成
-};
-
 export const resetStore = async () => {
-  localStorage.clear();
-  const resetState = { ...defaultNotesState };
-  resetState.imagesCacheUrl = await initImagesCacheUrl();
-  localStorage.setItem('notesState', JSON.stringify(resetState));
-  notesState.value = resetState;
+  try {
+    localStorage.clear();
+    const resetState = { ...defaultNotesState };
+    resetState.imagesCacheUrl = await initImagesCacheUrl();
+    localStorage.setItem('notesState', JSON.stringify(resetState));
+    notesState.value = resetState;
+  } catch (error) {
+    console.error('Failed to reset store:', error);
+  }
 };
 
-// 监听 localStorage 变化
-watch(() => localStorage.getItem('notesState'), initialNotesStateLocal);
+// 不需要监听 localStorage 变化，因为在 Tauri 中状态管理是本地的
 
 // 监听状态变化并保存到 localStorage
-watch(notesState.value, e => {
+watch(() => notesState.value, e => {
   localStorage.setItem('notesState', JSON.stringify(e));
   // 在 Tauri 中，我们不需要 IPC 通信
 }, { deep: true });

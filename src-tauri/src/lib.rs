@@ -17,16 +17,6 @@ fn register_editor_window(_app_handle: AppHandle, state: tauri::State<AppState>)
 }
 
 #[tauri::command]
-fn toggle_devtools(app_handle: AppHandle) {
-    if let Some(window) = app_handle.get_webview_window("main") {
-        // 简化版本，直接打开开发者工具
-        let _ = window.open_devtools();
-        println!("🔧 DevTools opened");
-        io::stdout().flush().unwrap();
-    }
-}
-
-#[tauri::command]
 fn unregister_editor_window(app_handle: AppHandle, state: tauri::State<AppState>) {
     let mut count = state.window_count.lock().unwrap();
     *count -= 1;
@@ -77,13 +67,13 @@ pub fn run() {
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_os::init())
-    .setup(|app| {
+    .setup(|_app| {
       println!("🚀 Tauri app setup completed");
       io::stdout().flush().unwrap();
       
       #[cfg(debug_assertions)]
       {
-        app.handle().plugin(tauri_plugin_log::Builder::default().build())?;
+        _app.handle().plugin(tauri_plugin_log::Builder::default().build())?;
       }
       Ok(())
     })
@@ -120,7 +110,7 @@ pub fn run() {
         _ => {}
       }
     })
-    .invoke_handler(tauri::generate_handler![register_editor_window, unregister_editor_window, toggle_devtools])
+    .invoke_handler(tauri::generate_handler![register_editor_window, unregister_editor_window])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
     

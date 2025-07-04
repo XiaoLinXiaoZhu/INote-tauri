@@ -10,7 +10,7 @@
   },
   "app": {
     "security": {
-      "csp": null
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: tauri: http://ipc.localhost https://ipc.localhost; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' http://ipc.localhost https://ipc.localhost tauri:;"
     },
     "windows": [
       {

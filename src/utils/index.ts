@@ -104,10 +104,10 @@ export const uuid = (): string => {
   return S4() + S4() + '-' + S4() + '-' + S4() + '-' + S4() + '-' + S4() + S4() + S4();
 };
 
-export const symbolKey = Symbol('key');
-export const symbolIv = Symbol('iv');
-export const symbolEncrypt = Symbol('encrypt');
-export const symbolDecode = Symbol('decode');
+export const symbolKey = 'crypto_key';
+export const symbolIv = 'crypto_iv';
+export const symbolEncrypt = 'crypto_encrypt';
+export const symbolDecode = 'crypto_decode';
 export const algorithm = {
   [symbolKey]: enc.Utf8.parse('1234123412ABCDEF'), // 十六位十六进制数作为密钥
   [symbolIv]: enc.Utf8.parse('ABCDEF1234123412'), // 十六位十六进制数作为密钥偏移量

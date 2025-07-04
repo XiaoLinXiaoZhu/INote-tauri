@@ -14,8 +14,36 @@ export interface NoteModel {
 
 class TauriNoteService {
   private db: Database | null = null;
+  private initPromise: Promise<void> | null = null;
+  private isInitialized = false;
+  private static instance: TauriNoteService | null = null;
+
+  // 单例模式，确保在多个窗口中共享同一个数据库实例
+  static getInstance(): TauriNoteService {
+    if (!TauriNoteService.instance) {
+      TauriNoteService.instance = new TauriNoteService();
+    }
+    return TauriNoteService.instance;
+  }
 
   async initialize() {
+    // 如果已经初始化，直接返回
+    if (this.isInitialized) {
+      console.log('🚀 Database already initialized, skipping...');
+      return;
+    }
+    
+    // 如果正在初始化，等待初始化完成
+    if (this.initPromise) {
+      console.log('🚀 Database initialization in progress, waiting...');
+      return this.initPromise;
+    }
+    
+    this.initPromise = this._initialize();
+    return this.initPromise;
+  }
+
+  private async _initialize() {
     console.log('🚀 Initializing Tauri database service');
     try {
       console.log('🚀 Loading database...');
@@ -25,9 +53,20 @@ class TauriNoteService {
       console.log('🚀 Creating/checking tables...');
       await this.createTables();
       console.log('🚀 Tables created/checked successfully');
+      
+      this.isInitialized = true;
     } catch (error) {
       console.error('❌ Failed to initialize database:', error);
       throw error;
+    }
+  }
+  
+  private async ensureInitialized() {
+    if (!this.isInitialized && this.initPromise) {
+      await this.initPromise;
+    }
+    if (!this.db || !this.isInitialized) {
+      throw new Error('Database not initialized');
     }
   }
 
@@ -91,13 +130,10 @@ class TauriNoteService {
 
   async getAllNotes(): Promise<NoteModel[]> {
     console.log('🚀 Getting all notes from database');
-    if (!this.db) {
-      console.error('❌ Database not initialized');
-      throw new Error('Database not initialized');
-    }
+    await this.ensureInitialized();
     
     try {
-      const result = await this.db.select<NoteModel[]>(
+      const result = await this.db!.select<NoteModel[]>(
         'SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC'
       );
       console.log('🚀 getAllNotes result:', result);
@@ -109,9 +145,9 @@ class TauriNoteService {
   }
 
   async getNoteById(id: number): Promise<NoteModel | null> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
-    const result = await this.db.select<NoteModel[]>(
+    const result = await this.db!.select<NoteModel[]>(
       'SELECT * FROM notes WHERE id = ?',
       [id]
     );
@@ -119,9 +155,9 @@ class TauriNoteService {
   }
 
   async getNoteByUid(uid: string): Promise<NoteModel | null> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
-    const result = await this.db.select<NoteModel[]>(
+    const result = await this.db!.select<NoteModel[]>(
       'SELECT * FROM notes WHERE uid = ?',
       [uid]
     );
@@ -129,9 +165,9 @@ class TauriNoteService {
   }
 
   async createNote(note: Omit<NoteModel, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
-    const result = await this.db.execute(
+    const result = await this.db!.execute(
       'INSERT INTO notes (uid, title, content, markdown, color, is_pinned) VALUES (?, ?, ?, ?, ?, ?)',
       [note.uid || '', note.title, note.content, note.markdown || '', note.color || '#ffd54f', note.is_pinned || false]
     );
@@ -140,7 +176,7 @@ class TauriNoteService {
   }
 
   async updateNote(id: number, note: Partial<NoteModel>): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
     const fields = [];
     const values = [];
@@ -169,20 +205,20 @@ class TauriNoteService {
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
     
-    await this.db.execute(
+    await this.db!.execute(
       `UPDATE notes SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
   }
 
   async deleteNote(id: number): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
-    await this.db.execute('DELETE FROM notes WHERE id = ?', [id]);
+    await this.db!.execute('DELETE FROM notes WHERE id = ?', [id]);
   }
 
   async updateNoteByUid(uid: string, note: Partial<NoteModel>): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
     const fields = [];
     const values = [];
@@ -211,22 +247,22 @@ class TauriNoteService {
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(uid);
     
-    await this.db.execute(
+    await this.db!.execute(
       `UPDATE notes SET ${fields.join(', ')} WHERE uid = ?`,
       values
     );
   }
 
   async deleteNoteByUid(uid: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
-    await this.db.execute('DELETE FROM notes WHERE uid = ?', [uid]);
+    await this.db!.execute('DELETE FROM notes WHERE uid = ?', [uid]);
   }
 
   async searchNotes(keyword: string): Promise<NoteModel[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    await this.ensureInitialized();
     
-    const result = await this.db.select<NoteModel[]>(
+    const result = await this.db!.select<NoteModel[]>(
       'SELECT * FROM notes WHERE title LIKE ? OR content LIKE ? ORDER BY is_pinned DESC, updated_at DESC',
       [`%${keyword}%`, `%${keyword}%`]
     );
@@ -234,4 +270,4 @@ class TauriNoteService {
   }
 }
 
-export const noteService = new TauriNoteService();
+export const noteService = TauriNoteService.getInstance();

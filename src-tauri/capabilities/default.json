@@ -21,9 +21,16 @@
     "fs:allow-read-dir",
     "fs:allow-read-file",
     "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:allow-create",
+    "fs:allow-copy-file",
+    "fs:allow-remove",
     "dialog:default",
     "log:default",
     "updater:default",
-    "process:default"
+    "process:default",
+    "shell:default",
+    "shell:allow-open",
+    "os:default"
   ]
 }

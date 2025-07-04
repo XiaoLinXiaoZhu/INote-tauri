@@ -125,7 +125,7 @@ body,
 }
 
 body {
-  padding: 4px;
+  padding: 0px;
   user-select: none;
   outline: none;
 }

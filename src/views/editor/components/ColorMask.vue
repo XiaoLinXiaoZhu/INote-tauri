@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { browserWindowOption, classNames } from '@/config';
-import { BrowserWindow, ipcRenderer } from 'electron';
+// 已移除 Electron 引用，现在使用 Tauri API
 import { createBrowserWindow } from '@/utils';
 import { onMounted, onUnmounted } from 'vue';
 
@@ -28,30 +28,27 @@ const props = defineProps({
     default: false
   }
 });
-let childrenWindow: BrowserWindow | null;
 
 /** 打开主页列表 */
-const openNotesList = () => {
-  let indexShowStatus = false;
-
-  // 判断列表窗口是否存在
-  ipcRenderer.send('whetherToOpen');
-  ipcRenderer.on('getWhetherToOpen', () => {
-    indexShowStatus = true;
-    return;
-  });
-  emits('onOpen', false);
-
-  if (childrenWindow) {
-    childrenWindow = null;
-  }
-
-  setTimeout(() => {
-    // 如果窗口不在
-    if (!indexShowStatus) {
-      childrenWindow = createBrowserWindow(browserWindowOption(), '/');
+const openNotesList = async () => {
+  try {
+    // 使用 Tauri API 检查主窗口是否存在
+    const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+    const mainWindow = await WebviewWindow.getByLabel('main');
+    
+    if (mainWindow) {
+      // 如果主窗口存在，显示并聚焦
+      await mainWindow.show();
+      await mainWindow.setFocus();
+    } else {
+      // 如果主窗口不存在，创建新的主窗口
+      createBrowserWindow(browserWindowOption(), '/');
     }
-  }, 100);
+    
+    emits('onOpen', false);
+  } catch (error) {
+    console.error('打开主页列表失败:', error);
+  }
 };
 
 const listenerESCHandle = (e: KeyboardEvent) => {

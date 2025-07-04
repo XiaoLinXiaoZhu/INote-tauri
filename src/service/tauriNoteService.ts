@@ -16,11 +16,17 @@ class TauriNoteService {
   private db: Database | null = null;
 
   async initialize() {
+    console.log('🚀 Initializing Tauri database service');
     try {
+      console.log('🚀 Loading database...');
       this.db = await Database.load('sqlite:i-notes.db');
+      console.log('🚀 Database loaded successfully');
+      
+      console.log('🚀 Creating/checking tables...');
       await this.createTables();
+      console.log('🚀 Tables created/checked successfully');
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error('❌ Failed to initialize database:', error);
       throw error;
     }
   }
@@ -84,12 +90,22 @@ class TauriNoteService {
   }
 
   async getAllNotes(): Promise<NoteModel[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    console.log('🚀 Getting all notes from database');
+    if (!this.db) {
+      console.error('❌ Database not initialized');
+      throw new Error('Database not initialized');
+    }
     
-    const result = await this.db.select<NoteModel[]>(
-      'SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC'
-    );
-    return result;
+    try {
+      const result = await this.db.select<NoteModel[]>(
+        'SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC'
+      );
+      console.log('🚀 getAllNotes result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error getting all notes:', error);
+      throw error;
+    }
   }
 
   async getNoteById(id: number): Promise<NoteModel | null> {

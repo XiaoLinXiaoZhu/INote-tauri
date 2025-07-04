@@ -8,7 +8,7 @@ type ThrottleEvent = FunctionalControl;
 
 // 防抖函数
 export const debounce: DebounceEvent = function(fn, delay = 1000) {
-  let timer: NodeJS.Timeout | null = null;
+  let timer: number | null = null;
   return (...args: any) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {

@@ -5,7 +5,7 @@ type MessageType = 'success' | 'info' | 'error' | 'warning';
 
 let messageApp: App<Element> | null = null;
 let messageEl: HTMLDivElement | null = null;
-let timeouter: NodeJS.Timeout | null;
+let timeouter: number | null;
 
 const render = (text: string, type: MessageType) => {
   return h(
@@ -38,7 +38,7 @@ const useMessage = (text: string, type: MessageType = 'info', duration = 2800): 
     }
   });
   if (timeouter) {
-    clearTimeout(timeouter as NodeJS.Timeout);
+    clearTimeout(timeouter as number);
     timeouter = null;
   }
   if (!messageEl) {
@@ -52,7 +52,7 @@ const useMessage = (text: string, type: MessageType = 'info', duration = 2800): 
     setTimeout(() => {
       messageEl?.remove();
       messageEl = null;
-      clearTimeout(timeouter as NodeJS.Timeout);
+      clearTimeout(timeouter as number);
       timeouter = null;
     }, 200);
   }, duration);

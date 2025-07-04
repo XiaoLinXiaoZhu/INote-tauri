@@ -94,7 +94,7 @@
         <p>版本：{{ version }}</p>
         <p>平台: {{ appInfo.node }}</p>
         <p>渲染引擎: {{ appInfo.chrome }}</p>
-        <p>框架: {{ appInfo.electron }}</p>
+        <p>框架: {{ appInfo.tauri }}</p>
         <p>Copyright (c) {{ currentYear }} {{ packageJson.author }}.</p>
       </div>
     </Card>
@@ -126,12 +126,12 @@ import { getVersion } from '@tauri-apps/api/app';
 const appInfo = {
   node: 'Tauri/Rust',
   chrome: 'WebView',
-  electron: 'N/A'
+  tauri: 'v2.0'
 };
 const currentYear = new Date().getFullYear();
 const version = ref('');
-const issueLink = 'https://github.com/heiyehk/electron-vue3-inote/issues';
-const githubLink = 'https://github.com/heiyehk/electron-vue3-inote';
+const issueLink = 'https://github.com/XiaoLinXiaoZhu/INote-tauri/issues';
+const githubLink = 'https://github.com/XiaoLinXiaoZhu/INote-tauri';
 const clearBtnState = ref(false);
 
 // 获取应用版本
@@ -241,8 +241,5 @@ const openImagesUrlDir = async () => {
   line-height: 1;
   padding: 1px 2px;
   margin: 0 2px;
-}
-
-.block-button {
 }
 </style>

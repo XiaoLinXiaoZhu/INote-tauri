@@ -12,18 +12,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { noteService } from '@/service/tauriNoteService';
+
+console.log('🚀 Search component loaded');
 
 const emits = defineEmits(['onSearch']);
 const searchValue = ref('');
 
+onMounted(async () => {
+  console.log('🚀 Search component mounted, performing initial search');
+  try {
+    await searchDb();
+    console.log('🚀 Initial search completed');
+  } catch (error) {
+    console.error('❌ Initial search failed:', error);
+  }
+});
+
 const searchDb = async () => {
+  console.log('🚀 Searching database with value:', searchValue.value);
   try {
     // 如果有搜索内容，使用搜索功能；否则获取所有笔记
     const data = searchValue.value 
       ? await noteService.searchNotes(searchValue.value)
       : await noteService.getAllNotes();
+    
+    console.log('🚀 Database search result:', data);
     
     // 转换数据格式以保持兼容性
     const formattedData = data.map(note => ({
@@ -36,9 +51,10 @@ const searchDb = async () => {
       updatedAt: note.updated_at
     }));
     
+    console.log('🚀 Formatted data:', formattedData);
     emits('onSearch', formattedData, searchValue.value);
   } catch (error) {
-    console.error('搜索笔记失败:', error);
+    console.error('❌ 搜索笔记失败:', error);
     emits('onSearch', [], searchValue.value);
   }
 };

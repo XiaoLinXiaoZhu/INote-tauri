@@ -23,7 +23,9 @@
         "resizable": true,
         "title": "I便笺",
         "decorations": false,
-        "closable": true
+        "closable": true,
+        "devtools": true,
+        "alwaysOnTop": false
       }
     ],
     "withGlobalTauri": false

@@ -29,17 +29,10 @@ npm run tauri dev
 npm run tauri build
 ```
 
-## 教程
-【electron+vue3+ts实战便笺exe】一、搭建框架配置
-https://juejin.cn/post/6909723449246089224
+## 致谢
+本项目由 [heiyehk/electron-vue-inote](https://github.com/heiyehk/electron-vue3-inote) 修改而来。
 
-【electron+vue3+ts实战便笺exe】二、electron+vue3开发内容
-https://juejin.cn/post/6909725365107687431
-
-【electron+vue3+ts实战便笺exe】终章：markdown编辑器以及右键功能实现
-https://juejin.cn/post/7187704994731130938
-
-![gif](https://user-images.githubusercontent.com/33891067/126119851-b59a0acb-07b4-4126-9698-961ee0f706a7.gif)
+从原本的 electron 改为了使用 tauri 使得其拥有更小的体积和更快的启动速度
 
 ```
 electron-vue3-inote

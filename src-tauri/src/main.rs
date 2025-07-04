@@ -1,19 +1,20 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-// 临时注释掉下面这行来在 release 版本中显示控制台进行调试
-// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Windows 平台下隐藏控制台窗口
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::io::{self, Write};
 
-#[cfg(windows)]
-extern "system" {
-    fn AllocConsole() -> i32;
-}
+// 注释掉控制台窗口相关代码
+// #[cfg(windows)]
+// extern "system" {
+//     fn AllocConsole() -> i32;
+// }
 
 fn main() {
-    #[cfg(windows)]
-    unsafe {
-        AllocConsole();
-    }
+    // 注释掉自动分配控制台窗口的代码
+    // #[cfg(windows)]
+    // unsafe {
+    //     AllocConsole();
+    // }
     
     println!("🚀 Starting INote-tauri application...");
     io::stdout().flush().unwrap();

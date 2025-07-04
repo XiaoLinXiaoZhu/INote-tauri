@@ -14,6 +14,13 @@ rust-version = "1.77.2"
 name = "i-notes"
 path = "src/main.rs"
 
+# Windows 特定配置：隐藏控制台窗口
+[target.'cfg(windows)'.build-dependencies]
+tauri-build = { version = "2.3.0", features = [] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.48", features = ["Win32_System_Console"] }
+
 [lib]
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

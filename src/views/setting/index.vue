@@ -63,8 +63,8 @@
       <BlockItem :is-link="true">
         <div class="flex-items">
           <i class="iconfont icon-mail"></i>
-          <a class="link-style" href="mailto:heiyehk@foxmail.com">heiyehk@foxmail.com</a>
-          <ICopy style="margin-left: 20px" copy-text="heiyehk@foxmail.com">复制</ICopy>
+          <a class="link-style" href="mailto:helloXLXZ233@gmail.com">helloXLXZ233@gmail.com</a>
+          <ICopy style="margin-left: 20px" copy-text="helloXLXZ233@gmail.com">复制</ICopy>
         </div>
         <template #desc>
           如果你有更好的建议或者动画效果，请联系我

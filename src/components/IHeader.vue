@@ -54,7 +54,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
 import { browserWindowOption } from '@/config';
-import { createBrowserWindow, createEditorWindow, transitCloseWindow, uuid } from '@/utils';
+import { createEditorWindow, transitCloseWindow, uuid } from '@/utils';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { platform as getPlatform } from '@tauri-apps/plugin-os';
 

@@ -32,7 +32,7 @@ import { browserWindowOption } from '@/config';
 import { noteService } from '@/service/tauriNoteService';
 import { windowConfigService } from '@/service/windowConfigService';
 import { DBNotesListType } from '@/types/notes';
-import { createBrowserWindow, createEditorWindow } from '@/utils';
+import { createEditorWindow } from '@/utils';
 import dayjs from 'dayjs';
 import { onBeforeMount, onMounted, onUnmounted, PropType, Ref, ref, watch } from 'vue';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';

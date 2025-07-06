@@ -31,9 +31,10 @@ import { listen, emit } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { twiceHandle, uuid } from '@/utils';
 import { noteService } from '@/service/tauriNoteService';
-
 import { transitCloseWindow } from '@/utils';
 import { notesState } from '@/store/notes.state';
+import { windowConfigService } from '@/service/windowConfigService';
+
 import IDropBar from '@/components/IDropBar.vue';
 import ColorMask from './components/ColorMask.vue';
 
@@ -75,6 +76,9 @@ onBeforeMount(async () => {
   // 初始化数据库
   await noteService.initialize();
   
+  // 初始化窗口配置服务
+  await windowConfigService.initialize();
+  
   // 获取当前窗口
   const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
   currentWindow = getCurrentWebviewWindow();
@@ -83,6 +87,9 @@ onBeforeMount(async () => {
   await invoke('register_editor_window');
   
   await initEditorContent();
+  
+  // 在内容初始化后设置窗口配置
+  await setupWindowConfig();
   await afterIpc();
 });
 
@@ -254,6 +261,24 @@ const afterIpc = async () => {
     currentWindow.show();
     emit(`get_${uid.value}_toOpen`);
   });
+};
+
+// 设置窗口配置
+const setupWindowConfig = async () => {
+  if (!currentWindow || !uid.value) return;
+  
+  const windowId = `editor_${uid.value}`;
+  try {
+    // 应用保存的窗口配置（编辑器默认尺寸）
+    await windowConfigService.applyWindowConfig(currentWindow, windowId, 290, 320);
+    
+    // 开始跟踪窗口变化
+    await windowConfigService.startWindowConfigTracking(currentWindow, windowId);
+    
+    console.log(`✅ Editor window config applied and tracking started for ${windowId}`);
+  } catch (error) {
+    console.error('❌ Failed to setup editor window config:', error);
+  }
 };
 
 const headerClass = computed(() => {

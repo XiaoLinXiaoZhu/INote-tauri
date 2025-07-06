@@ -41,6 +41,7 @@
     "sql": {
       "preload": ["sqlite:i-notes.db"]
     },
+    "store": {},
     "updater": {
       "active": false,
       "endpoints": [],

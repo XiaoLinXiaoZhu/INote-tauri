@@ -30,8 +30,9 @@
 import CreateRightClick from '@/components/IRightClick';
 import { browserWindowOption } from '@/config';
 import { noteService } from '@/service/tauriNoteService';
+import { windowConfigService } from '@/service/windowConfigService';
 import { DBNotesListType } from '@/types/notes';
-import { createBrowserWindow } from '@/utils';
+import { createBrowserWindow, createEditorWindow } from '@/utils';
 import dayjs from 'dayjs';
 import { onBeforeMount, onMounted, onUnmounted, PropType, Ref, ref, watch } from 'vue';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
@@ -65,8 +66,15 @@ const todayZeroTimeStamp = dayjs()
   .valueOf();
 
 const bwsWinOption = browserWindowOption('editor');
-const openEditorWindow = (uid: string) => {
-  createBrowserWindow(bwsWinOption, `/editor?uid=${uid}`, true);
+const openEditorWindow = async (uid: string) => {
+  // 使用增强的编辑器窗口创建函数，自动应用窗口配置记忆
+  const editorWindow = await createEditorWindow(uid, bwsWinOption, '/editor');
+  
+  if (editorWindow) {
+    console.log(`✅ Editor window opened for note ${uid} with memory support`);
+  } else {
+    console.error(`❌ Failed to open editor window for note ${uid}`);
+  }
 };
 
 watch(
@@ -199,6 +207,15 @@ const deleteNotes = async () => {
     notesState.value.switchStatus.deleteTip = false;
     deleteTipChecked.value = undefined;
   }
+  
+  // 删除便签的窗口配置
+  try {
+    await windowConfigService.deleteWindowConfig(`editor_${deleteCurrentUid.value}`);
+    console.log(`✅ Window config deleted for note ${deleteCurrentUid.value}`);
+  } catch (error) {
+    console.error('❌ Failed to delete window config:', error);
+  }
+  
   // 用 Tauri API 删除便笺
   await noteService.deleteNoteByUid(deleteCurrentUid.value);
   await removeNoteItem(deleteCurrentUid.value);

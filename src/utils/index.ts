@@ -1,6 +1,8 @@
 import { winURL, isDevelopment } from '@/config';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { LogicalPosition } from '@tauri-apps/api/window';
 import { enc, AES, mode, pad } from 'crypto-js';
+import { windowConfigService } from '@/service/windowConfigService';
 
 type FunctionalControl = (this: any, fn: any, delay?: number) => (...args: any) => void;
 type DebounceEvent = FunctionalControl;
@@ -209,6 +211,67 @@ export const openImageAsNewWindow = async (img: Element) => {
     return webview;
   } catch (error) {
     console.error('创建图片预览窗口失败:', error);
+    return null;
+  }
+};
+
+// 创建便签编辑器窗口（带配置记忆功能）
+export const createEditorWindow = async (
+  noteUid: string, 
+  bwopt = {} as any,
+  url = '/editor'
+): Promise<WebviewWindow | null> => {
+  const windowLabel = `editor_${noteUid}_${Date.now()}`;
+  const windowId = `editor_${noteUid}`;
+  
+  console.log('创建编辑器窗口:', windowLabel, 'URL:', url, '配置:', bwopt);
+  
+  try {
+    // 先获取保存的窗口配置
+    await windowConfigService.initialize();
+    const savedConfig = await windowConfigService.getWindowConfig(windowId);
+    
+    // 合并默认配置和保存的配置
+    const finalConfig = {
+      url: `${winURL}/#${url}?uid=${noteUid}`,
+      width: savedConfig?.width || bwopt.width || 290,
+      height: savedConfig?.height || bwopt.height || 320,
+      resizable: bwopt.resizable !== false,
+      title: bwopt.title || 'I便笺',
+      center: !savedConfig, // 如果有保存的位置就不居中
+      skipTaskbar: bwopt.skipTaskbar || false,
+      alwaysOnTop: bwopt.alwaysOnTop || false,
+      decorations: bwopt.decorations !== false,
+      transparent: bwopt.transparent || false,
+      ...(savedConfig && savedConfig.x !== null && savedConfig.y !== null ? {
+        x: savedConfig.x,
+        y: savedConfig.y
+      } : {})
+    };
+    
+    const webview = new WebviewWindow(windowLabel, finalConfig);
+    
+    console.log('编辑器窗口创建成功:', windowLabel);
+    
+    // 等待窗口完全加载后开始配置跟踪
+    webview.once('tauri://window-created', async () => {
+      try {
+        // 如果有保存的位置，应用位置
+        if (savedConfig && savedConfig.x !== null && savedConfig.y !== null && savedConfig.x !== undefined && savedConfig.y !== undefined) {
+          await webview.setPosition(new LogicalPosition(savedConfig.x, savedConfig.y));
+        }
+        
+        // 开始跟踪窗口变化
+        await windowConfigService.startWindowConfigTracking(webview, windowId);
+        console.log(`✅ Editor window tracking started for ${windowId}`);
+      } catch (error) {
+        console.error('❌ Failed to setup editor window tracking:', error);
+      }
+    });
+    
+    return webview;
+  } catch (error) {
+    console.error('创建编辑器窗口失败:', error);
     return null;
   }
 };

@@ -3,17 +3,46 @@ import App from './App.vue';
 import router from './router';
 import outputErrorLog from '@/utils/errorLog';
 import { noteService } from '@/service/tauriNoteService';
+import { windowConfigService } from '@/service/windowConfigService';
 
 console.log('🚀 Starting Vue application...');
 
-// 初始化 Tauri 数据库服务
-console.log('🚀 Initializing database service...');
-noteService.initialize()
-  .then(() => {
-    console.log('✅ Database service initialized successfully');
-  })
+// 初始化服务
+const initializeServices = async () => {
+  console.log('🚀 Initializing services...');
+  
+  // 初始化数据库服务
+  console.log('🚀 Initializing database service...');
+  await noteService.initialize();
+  console.log('✅ Database service initialized successfully');
+  
+  // 初始化窗口配置服务
+  console.log('🚀 Initializing window config service...');
+  await windowConfigService.initialize();
+  console.log('✅ Window config service initialized successfully');
+  
+  // 为主窗口应用配置
+  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+    try {
+      const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+      const currentWindow = getCurrentWebviewWindow();
+      
+      // 应用保存的窗口配置
+      await windowConfigService.applyWindowConfig(currentWindow, 'main', 400, 600);
+      
+      // 开始跟踪窗口变化
+      await windowConfigService.startWindowConfigTracking(currentWindow, 'main');
+      
+      console.log('✅ Main window config applied and tracking started');
+    } catch (error) {
+      console.error('❌ Failed to setup main window config:', error);
+    }
+  }
+};
+
+initializeServices()
   .catch(error => {
-    console.error('❌ Failed to initialize database service:', error);
+    console.error('❌ Failed to initialize services:', error);
   });
 
 console.log('🚀 Creating Vue app...');

@@ -54,7 +54,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
 import { browserWindowOption } from '@/config';
-import { createBrowserWindow, transitCloseWindow } from '@/utils';
+import { createBrowserWindow, createEditorWindow, transitCloseWindow, uuid } from '@/utils';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { platform as getPlatform } from '@tauri-apps/plugin-os';
 
@@ -92,8 +92,18 @@ onMounted(async () => {
 
 const editorWinOptions = browserWindowOption('editor');
 // 打开新窗口
-const openNewWindow = () => {
-  createBrowserWindow(editorWinOptions, '/editor', false);
+const openNewWindow = async () => {
+  // 为新便签生成唯一ID
+  const newNoteUid = uuid();
+  
+  // 使用增强的编辑器窗口创建函数
+  const editorWindow = await createEditorWindow(newNoteUid, editorWinOptions, '/editor');
+  
+  if (editorWindow) {
+    console.log('✅ New editor window created with memory support');
+  } else {
+    console.error('❌ Failed to create editor window');
+  }
 };
 
 // 获取窗口固定状态

@@ -105,6 +105,16 @@ pub fn run() {
               api.prevent_close();
               let _ = window.hide();
             }
+          } else if window.label().starts_with("editor_") {
+            // 处理编辑器窗口关闭
+            let mut count = app_state.window_count.lock().unwrap();
+            *count -= 1;
+            let remaining = *count;
+            println!("🚀 Editor window closed, remaining count: {}", remaining);
+            io::stdout().flush().unwrap();
+            
+            // 允许编辑器窗口正常关闭
+            // 不需要特殊处理，让窗口正常关闭即可
           }
         }
         _ => {}

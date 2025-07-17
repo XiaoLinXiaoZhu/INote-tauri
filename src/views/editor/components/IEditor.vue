@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import CreateRightClick, { MenuOptions } from '@/components/IRightClick';
@@ -153,6 +153,13 @@ const createImageUrl = async () => {
 
 onMounted(() => {
   loadVditor();
+});
+
+// 监听内容变化
+watch(() => props.modelValue, (newValue) => {
+  if (vditor.value && newValue !== vditor.value.getValue()) {
+    vditor.value.setValue(newValue);
+  }
 });
 
 /** 编辑器加载完毕 */

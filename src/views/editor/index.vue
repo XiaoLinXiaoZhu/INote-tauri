@@ -95,38 +95,41 @@ onBeforeMount(async () => {
 
 // 初始化编辑内容
 const initEditorContent = async () => {
+  console.log('🔄 初始化编辑器内容...');
   const routeUid = route.query?.uid as string;
-  // 判断是编辑还是新增
-  if (routeUid) {
-    // 编辑
-    uid.value = routeUid;
-    isNewNote.value = false; // 标记为编辑现有便签
-    await getCurUidItem(routeUid);
+  if (!routeUid) {
+    console.error('❌ 没有提供便签UID');
     return;
   }
 
-  // 新建
-  const uuidString = uuid();
-  uid.value = uuidString;
-  isNewNote.value = true; // 标记为新建便签
-  await router.push({
-    query: {
-      uid: uuidString
-    }
-  });
+  uid.value = routeUid;
+  console.log('📋 当前便签UID:', routeUid);
   
-  try {
-    await noteService.createNote({
-      uid: uid.value,
-      title: '',
-      content: '',
-      markdown: '',
-      color: '',
-    });
-    // 不在创建时立即发送事件，等用户输入内容后再发送
-    console.log('便签创建成功，uid:', uid.value);
-  } catch (error) {
-    console.error('创建便签失败:', error);
+  // 检查是否已存在该便签
+  const existingNote = await noteService.getNoteByUid(routeUid);
+  console.log('🔍 便签查询结果:', existingNote ? '已存在' : '不存在');
+  
+  if (existingNote) {
+    // 编辑现有便签
+    isNewNote.value = false;
+    console.log('✏️ 编辑现有便签，内容长度:', existingNote.content?.length || 0);
+    await getCurUidItem(routeUid);
+  } else {
+    // 新建便签（只在确实不存在时创建）
+    isNewNote.value = true;
+    console.log('🆕 创建新便签');
+    try {
+      await noteService.createNote({
+        uid: uid.value,
+        title: '',
+        content: '',
+        markdown: '',
+        color: '',
+      });
+      console.log('✅ 便签创建成功，uid:', uid.value);
+    } catch (error) {
+      console.error('❌ 创建便签失败:', error);
+    }
   }
 };
 
@@ -230,22 +233,38 @@ const updateData = async (updateType: 'className' | 'content') => {
 };
 
 const closeWindow = async () => {
-  // 注销编辑器窗口
-  await invoke('unregister_editor_window');
-  
-  // 如果是新建便签且没有内容，则删除
-  if (isNewNote.value && !iEditorHtml.value?.trim()) {
+  try {
+    // 注销编辑器窗口
+    await invoke('unregister_editor_window');
+    
+    // 如果是新建便签且没有内容，则删除
+    if (isNewNote.value && !iEditorHtml.value?.trim()) {
+      try {
+        await noteService.deleteNoteByUid(uid.value);
+        // 在关闭的时候如果没有内容就通知列表进行删除操作
+        emit('removeEmptyNoteItem', uid.value);
+      } catch (error) {
+        console.error('删除空便签失败:', error);
+      }
+    }
+    
+    // 确保窗口完全关闭
     try {
-      await noteService.deleteNoteByUid(uid.value);
-      // 在关闭的时候如果没有内容就通知列表进行删除操作
-      emit('removeEmptyNoteItem', uid.value);
+      await currentWindow.close();
     } catch (error) {
-      console.error('删除空便签失败:', error);
+      console.error('关闭窗口失败:', error);
+      // 强制关闭
+      await currentWindow.destroy();
+    }
+  } catch (error) {
+    console.error('关闭窗口时发生错误:', error);
+    // 最后的保险措施
+    try {
+      await currentWindow.destroy();
+    } catch (e) {
+      console.error('强制销毁窗口失败:', e);
     }
   }
-  
-  // 关闭当前窗口
-  await currentWindow.close();
 };
 
 /**

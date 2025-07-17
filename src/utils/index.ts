@@ -217,12 +217,27 @@ export const openImageAsNewWindow = async (img: Element) => {
 
 // 创建便签编辑器窗口（带配置记忆功能）
 export const createEditorWindow = async (
-  noteUid: string, 
+  noteUid: string,
   bwopt = {} as any,
   url = '/editor'
 ): Promise<WebviewWindow | null> => {
-  const windowLabel = `editor_${noteUid}_${Date.now()}`;
+  const windowLabel = `editor_${noteUid}`;
   const windowId = `editor_${noteUid}`;
+  
+  // 检查是否已存在该便签的窗口
+  try {
+    const existingWindows = await WebviewWindow.getAll();
+    const existingWindow = existingWindows.find(w => w.label === windowLabel);
+    
+    if (existingWindow) {
+      console.log('窗口已存在，激活现有窗口:', windowLabel);
+      await existingWindow.show();
+      await existingWindow.setFocus();
+      return existingWindow;
+    }
+  } catch (error) {
+    console.log('检查现有窗口时出错:', error);
+  }
   
   console.log('创建编辑器窗口:', windowLabel, 'URL:', url, '配置:', bwopt);
   

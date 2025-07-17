@@ -22,14 +22,14 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeMount, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import ILoading from '@/components/ILoading.vue';
 
 // 导入 Tauri API
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { listen, emit } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
-import { twiceHandle, uuid } from '@/utils';
+import { twiceHandle } from '@/utils';
 import { noteService } from '@/service/tauriNoteService';
 import { transitCloseWindow } from '@/utils';
 import { notesState } from '@/store/notes.state';
@@ -49,7 +49,6 @@ const showOptionsStatus = ref(false);
 const uid = ref('');
 const currentBgClassName = ref('');
 const route = useRoute();
-const router = useRouter();
 // 获取当前窗口
 let currentWindow: WebviewWindow;
 

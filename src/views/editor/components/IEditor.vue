@@ -8,7 +8,8 @@ import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import CreateRightClick, { MenuOptions } from '@/components/IRightClick';
 import { constImagesPath } from '@/config';
-import { openImageAsNewWindow, uuid } from '@/utils';
+import { uuid } from '@/utils';
+import { windowManager } from '@/service/windowManager';
 import useMessage from '@/components/IMessage';
 import { copyImage, fileToBuffer } from '@/utils/file';
 import { open as openShell } from '@tauri-apps/plugin-shell';
@@ -113,7 +114,15 @@ const loadVditor = () => {
     },
     image: {
       isPreview: false,
-      preview: openImageAsNewWindow
+      preview: async (img: Element) => {
+        const devicePixelRatio = window.devicePixelRatio;
+        const naturalWidth = (img as HTMLImageElement).naturalWidth / devicePixelRatio;
+        const naturalHeight = (img as HTMLImageElement).naturalHeight / devicePixelRatio;
+        const { availWidth, availHeight } = window.screen;
+        const width = Math.min(Math.max(naturalWidth, 500), availWidth);
+        const height = Math.min(Math.max(naturalHeight, 300), availHeight);
+        await windowManager.openImagePreview((img as HTMLImageElement).src, width, height);
+      }
     },
     upload: {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment

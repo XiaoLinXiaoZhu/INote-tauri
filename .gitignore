@@ -24,3 +24,6 @@ inotesError.log
 *.njsproj
 *.sln
 *.sw?
+
+# temp
+.temp/

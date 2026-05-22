@@ -17,8 +17,7 @@
 import { computed, defineAsyncComponent, ref, onMounted } from 'vue';
 import Search from './components/Search.vue';
 
-import { browserWindowOption } from '@/config';
-import { createBrowserWindow } from '@/utils';
+import { windowManager } from '@/service/windowManager';
 import { DBNotesType, DBNotesListType } from '@/types/notes';
 import Empty from './components/Empty.vue';
 import ILoading from '@/components/ILoading.vue';
@@ -41,17 +40,16 @@ const searchValue = ref('');
  */
 const blockState = ref(0);
 const blockEmptyContent = ref('');
-const editorWinOptions = browserWindowOption('editor');
 
 onMounted(() => {
   console.log('🚀 Index page mounted');
 });
 
 // 打开新窗口
-const openNewWindow = () => {
-  console.log('🚀 Opening new window, blockState:', blockState.value);
+const openNewWindow = async () => {
   if (blockState.value === 2) {
-    createBrowserWindow(editorWinOptions, '/editor', false);
+    const { uuid } = await import('@/utils');
+    await windowManager.openEditor(uuid());
   }
 };
 

@@ -12,16 +12,6 @@ export interface NoteModel {
   is_pinned?: boolean;
 }
 
-// 延迟导入windowConfigService以避免循环依赖
-let windowConfigService: any = null;
-const getWindowConfigService = async () => {
-  if (!windowConfigService) {
-    const module = await import('./windowConfigService');
-    windowConfigService = module.windowConfigService;
-  }
-  return windowConfigService;
-};
-
 class TauriNoteService {
   private db: Database | null = null;
   private initPromise: Promise<void> | null = null;
@@ -236,8 +226,8 @@ class TauriNoteService {
     // 如果找到了UID，清理相关的窗口配置
     if (note.length > 0 && note[0].uid) {
       try {
-        const windowConfigService = await getWindowConfigService();
-        await windowConfigService.deleteWindowConfig(`editor_${note[0].uid}`);
+        const { windowManager } = await import('./windowManager');
+        await windowManager.deleteWindowConfig(`editor_${note[0].uid}`);
         console.log(`✅ Window config cleaned for deleted note ${note[0].uid}`);
       } catch (error) {
         console.warn(`⚠️ Failed to clean window config for note ${note[0].uid}:`, error);
@@ -289,8 +279,8 @@ class TauriNoteService {
     
     // 清理相关的窗口配置
     try {
-      const windowConfigService = await getWindowConfigService();
-      await windowConfigService.deleteWindowConfig(`editor_${uid}`);
+      const { windowManager } = await import('./windowManager');
+      await windowManager.deleteWindowConfig(`editor_${uid}`);
       console.log(`✅ Window config cleaned for deleted note ${uid}`);
     } catch (error) {
       console.warn(`⚠️ Failed to clean window config for note ${uid}:`, error);

@@ -1,0 +1,40 @@
+--- src/window_config.rs
++++ replace WindowConfigStore::get -> Result<Option<WindowConfig>, String> with Ok(Some(Default::default()))
+@@ -32,36 +32,17 @@
+                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+             )"
+         ).map_err(|e| format!("Failed to create table: {}", e))?;
+ 
+         Ok(Self { conn: Mutex::new(conn) })
+     }
+ 
+     pub fn get(&self, window_id: &str) -> Result<Option<WindowConfig>, String> {
+-        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+-        let mut stmt = conn
+-            .prepare("SELECT window_id, width, height, x, y FROM window_configs WHERE window_id = ?1")
+-            .map_err(|e| e.to_string())?;
+-
+-        let result = stmt.query_row(params![window_id], |row| {
+-            Ok(WindowConfig {
+-                window_id: row.get(0)?,
+-                width: row.get(1)?,
+-                height: row.get(2)?,
+-                x: row.get(3)?,
+-                y: row.get(4)?,
+-            })
+-        });
+-
+-        match result {
+-            Ok(config) => Ok(Some(config)),
+-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+-            Err(e) => Err(e.to_string()),
+-        }
++        Ok(Some(Default::default())) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn save(&self, config: &WindowConfig) -> Result<(), String> {
+         let conn = self.conn.lock().map_err(|e| e.to_string())?;
+ 
+         let updated = conn.execute(
+             "UPDATE window_configs SET width = ?1, height = ?2, x = ?3, y = ?4, updated_at = CURRENT_TIMESTAMP WHERE window_id = ?5",
+             params![config.width, config.height, config.x, config.y, config.window_id],

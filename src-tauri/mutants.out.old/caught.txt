@@ -1,4 +1,0 @@
-src/window_config.rs:40:9: replace WindowConfigStore::get -> Result<Option<WindowConfig>, String> with Ok(None)
-src/window_config.rs:63:9: replace WindowConfigStore::save -> Result<(), String> with Ok(())
-src/window_config.rs:70:20: replace == with != in WindowConfigStore::save
-src/window_config.rs:81:9: replace WindowConfigStore::delete -> Result<(), String> with Ok(())

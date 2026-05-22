@@ -1,1 +1,0 @@
-src/window_config.rs:40:9: replace WindowConfigStore::get -> Result<Option<WindowConfig>, String> with Ok(Some(Default::default()))

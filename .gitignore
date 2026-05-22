@@ -27,3 +27,10 @@ inotesError.log
 
 # temp
 .temp/
+
+# Mutation testing output
+src-tauri/mutants.out/
+src-tauri/mutants.out.old/
+
+# Temp exec files
+_n0n_exec_*

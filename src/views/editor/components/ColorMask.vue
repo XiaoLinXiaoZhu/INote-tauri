@@ -16,9 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { browserWindowOption, classNames } from '@/config';
-// 已移除 Electron 引用，现在使用 Tauri API
-import { createBrowserWindow } from '@/utils';
+import { classNames } from '@/config';
 import { onMounted, onUnmounted } from 'vue';
 
 const emits = defineEmits(['onChange', 'onOpen', 'onClose']);
@@ -32,17 +30,12 @@ const props = defineProps({
 /** 打开主页列表 */
 const openNotesList = async () => {
   try {
-    // 使用 Tauri API 检查主窗口是否存在
     const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
     const mainWindow = await WebviewWindow.getByLabel('main');
     
     if (mainWindow) {
-      // 如果主窗口存在，显示并聚焦
       await mainWindow.show();
       await mainWindow.setFocus();
-    } else {
-      // 如果主窗口不存在，创建新的主窗口
-      createBrowserWindow(browserWindowOption(), '/');
     }
     
     emits('onOpen', false);

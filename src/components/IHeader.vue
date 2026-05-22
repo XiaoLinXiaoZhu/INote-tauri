@@ -53,9 +53,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
-import { browserWindowOption } from '@/config';
-import { createEditorWindow, transitCloseWindow, uuid } from '@/utils';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { windowManager } from '@/service/windowManager';
+import { uuid } from '@/utils';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { platform as getPlatform } from '@tauri-apps/plugin-os';
 
 const emits = defineEmits(['optionClick', 'onClose']);
@@ -90,45 +90,21 @@ onMounted(async () => {
   }
 });
 
-const editorWinOptions = browserWindowOption('editor');
 // 打开新窗口
 const openNewWindow = async () => {
-  // 为新便签生成唯一ID
   const newNoteUid = uuid();
-  
-  // 使用增强的编辑器窗口创建函数
-  const editorWindow = await createEditorWindow(newNoteUid, editorWinOptions, '/editor');
-  
-  if (editorWindow) {
-    console.log('✅ New editor window created with memory support');
-  } else {
-    console.error('❌ Failed to create editor window');
-  }
+  await windowManager.openEditor(newNoteUid);
 };
 
 // 获取窗口固定状态
 const isAlwaysOnTop = ref(false);
-let currentWindow: WebviewWindow;
-
-onMounted(async () => {
-  const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-  currentWindow = getCurrentWebviewWindow();
-  
-  // 在 Tauri 中获取窗口置顶状态
-  try {
-    // 我们无法直接在 Tauri WebviewWindow 上获取置顶状态，先设置为 false
-    isAlwaysOnTop.value = false;
-  } catch (error) {
-    console.error('获取窗口置顶状态失败:', error);
-  }
-});
 
 // 固定前面
 const drawingPin = async () => {
   try {
     isAlwaysOnTop.value = !isAlwaysOnTop.value;
-    // 设置窗口是否置顶
-    await currentWindow.setAlwaysOnTop(isAlwaysOnTop.value);
+    const current = getCurrentWebviewWindow();
+    await windowManager.setAlwaysOnTop(current.label, isAlwaysOnTop.value);
   } catch (error) {
     console.error('设置窗口置顶状态失败:', error);
   }
@@ -157,7 +133,13 @@ const clickOptions = () => {
 // 关闭窗口
 const closeWindow = () => {
   emits('onClose');
-  transitCloseWindow();
+  // Animation handled by CSS class, then close via backend
+  document.querySelector('#app')?.classList.remove('app-show');
+  document.querySelector('#app')?.classList.add('app-hide');
+  setTimeout(async () => {
+    const current = getCurrentWebviewWindow();
+    await windowManager.closeWindow(current.label);
+  }, 300);
 };
 
 /**

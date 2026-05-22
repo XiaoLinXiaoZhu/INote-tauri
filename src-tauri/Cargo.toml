@@ -34,3 +34,6 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-os = "2"
+rusqlite = { version = "0.31", features = ["bundled"] }
+urlencoding = "2"
+url = "2"

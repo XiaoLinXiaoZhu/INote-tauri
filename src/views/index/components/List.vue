@@ -4,12 +4,12 @@
       <li
         class="edit-item"
         v-mask
-        :class="[item.className, item.content ? '' : 'empty-item', item.remove ? 'remove-item' : '']"
+        :class="[item.className, item.mdContent ? '' : 'empty-item', item.remove ? 'remove-item' : '']"
         @dblclick="openEditorWindow(item.uid)"
         @contextmenu.prevent="contextMenu($event, item.uid)"
       >
         <span class="update-time">{{ getTime(item.updatedAt) }}</span>
-        <div class="edit-content module-editor empty-content" v-html="item.interception"></div>
+        <div class="edit-content module-editor empty-content" v-html="item.htmlSnapshot"></div>
       </li>
     </template>
   </ul>
@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import CreateRightClick from '@/components/IRightClick';
 import { noteService } from '@/service/tauriNoteService';
-import { DBNotesListType } from '@/types/notes';
+import type { NoteListItem } from '@/types/notes';
 import { windowManager } from '@/service/windowManager';
 import dayjs from 'dayjs';
 import { onBeforeMount, onMounted, onUnmounted, PropType, Ref, ref, watch } from 'vue';
@@ -39,8 +39,8 @@ import IMessageBox from '@/components/IMessageBox.vue';
 
 const props = defineProps({
   list: {
-    type: Array as PropType<DBNotesListType[]>,
-    default: []
+    type: Array as PropType<NoteListItem[]>,
+    default: () => []
   },
   searchValue: {
     type: String,
@@ -48,20 +48,14 @@ const props = defineProps({
   }
 });
 const emits = defineEmits(['changeBlockState']);
-const viewNotesList = ref<DBNotesListType[]>([]);
+const viewNotesList = ref<NoteListItem[]>([]);
 const deleteTipChecked: Ref<boolean | undefined> = ref(false);
 const deleteMessageShow = ref(false);
-// liRef 已移除，不再使用
 
 const rightClick = new CreateRightClick();
 
 const year = dayjs().year();
-// 今天0点时间戳
-const todayZeroTimeStamp = dayjs()
-  .hour(0)
-  .minute(0)
-  .second(0)
-  .valueOf();
+const todayZeroTimeStamp = dayjs().hour(0).minute(0).second(0).valueOf();
 
 const openEditorWindow = async (uid: string) => {
   await windowManager.openEditor(uid);
@@ -82,15 +76,10 @@ watch(
   }
 );
 
-// setLiRef 函数已移除，不再使用
-
 onMounted(async () => {
-  // 监听来自编辑器的事件
   await setupEventListeners();
-  
-  // 监听窗口重新显示事件
+
   await listen('tauri://focus', () => {
-    // 当窗口重新获得焦点时刷新数据
     getAllDBNotes();
   });
 });
@@ -99,66 +88,49 @@ onBeforeMount(() => {
   getAllDBNotes();
 });
 
-// 事件监听器存储
 const unlistenFns: UnlistenFn[] = [];
 
 const setupEventListeners = async () => {
-  // 监听新建便签事件
-  const unlistenCreate = await listen('createNewNote', (event) => {
-    console.log('收到创建新便签事件:', event.payload);
-    getAllDBNotes(); // 刷新列表
+  const unlistenCreate = await listen('createNewNote', () => {
+    getAllDBNotes();
   });
   unlistenFns.push(unlistenCreate);
 
-  // 监听便签内容更新事件
-  const unlistenContentUpdate = await listen('updateNoteItem_content', (event) => {
-    console.log('收到便签内容更新事件:', event.payload);
-    getAllDBNotes(); // 刷新列表
+  const unlistenContentUpdate = await listen('updateNoteItem_content', () => {
+    getAllDBNotes();
   });
   unlistenFns.push(unlistenContentUpdate);
 
-  // 监听便签颜色更新事件
-  const unlistenColorUpdate = await listen('updateNoteItem_className', (event) => {
-    console.log('收到便签颜色更新事件:', event.payload);
-    getAllDBNotes(); // 刷新列表
+  const unlistenColorUpdate = await listen('updateNoteItem_className', () => {
+    getAllDBNotes();
   });
   unlistenFns.push(unlistenColorUpdate);
 
-  // 监听删除空便签事件
-  const unlistenRemoveEmpty = await listen('removeEmptyNoteItem', (event) => {
-    console.log('收到删除空便签事件:', event.payload);
-    getAllDBNotes(); // 刷新列表
+  const unlistenRemoveEmpty = await listen('removeEmptyNoteItem', () => {
+    getAllDBNotes();
   });
   unlistenFns.push(unlistenRemoveEmpty);
 };
 
-// 组件卸载时清理事件监听器
 onUnmounted(() => {
   unlistenFns.forEach(unlisten => unlisten());
 });
 
 const getAllDBNotes = async () => {
-  // 用 Tauri API 获取所有便笺
   try {
     const notesAllList = await noteService.getAllNotes();
-    // 转换数据格式以适配现有的界面逻辑
-    const transformedNotes = notesAllList?.map(note => ({
+    const transformedNotes: NoteListItem[] = notesAllList?.map(note => ({
       uid: note.uid || '',
       className: note.color || '',
-      content: note.content || '',
-      markdown: note.markdown || note.content || '', // 优先使用 markdown
-      interception: note.content?.substring(0, 100) || '', // 截取前100个字符作为摘要
+      mdContent: note.md_content || '',
+      htmlSnapshot: note.html_snapshot || '',
       createdAt: new Date(note.created_at || ''),
       updatedAt: new Date(note.updated_at || ''),
-      remove: false // 添加 remove 属性
+      remove: false,
     })) || [];
-    
+
     viewNotesList.value = transformedNotes;
-    if (transformedNotes && transformedNotes.length) {
-      emits('changeBlockState', 1);
-    } else {
-      emits('changeBlockState', 2);
-    }
+    emits('changeBlockState', transformedNotes.length ? 1 : 2);
   } catch (e) {
     viewNotesList.value = [];
     emits('changeBlockState', 2);
@@ -197,32 +169,28 @@ const deleteNotes = async () => {
     notesState.value.switchStatus.deleteTip = false;
     deleteTipChecked.value = undefined;
   }
-  
-  // 删除便签的窗口配置
+
   try {
     await windowManager.deleteWindowConfig(`editor_${deleteCurrentUid.value}`);
   } catch (error) {
     console.error('删除窗口配置失败:', error);
   }
-  
-  // 用 Tauri API 删除便笺
+
   await noteService.deleteNoteByUid(deleteCurrentUid.value);
   await removeNoteItem(deleteCurrentUid.value);
   await deleteNotesUidDir();
   deleteCurrentUid.value = '';
 };
 
-/** 删除便笺后删除本地文件夹 */
 const deleteNotesUidDir = async () => {
-  // TODO: 这里需要实现删除图片文件夹的逻辑
   try {
     const { join } = await import('@tauri-apps/api/path');
     const { exists, remove } = await import('@tauri-apps/plugin-fs');
     const { appDataDir } = await import('@tauri-apps/api/path');
-    
+
     const appDataPath = await appDataDir();
     const imagesPath = await join(appDataPath, 'images', deleteCurrentUid.value);
-    
+
     if (await exists(imagesPath)) {
       await remove(imagesPath, { recursive: true });
     }
@@ -247,17 +215,13 @@ const getTime = (time: Date) => {
   const date = dayjs(time);
   const dateYear = date.year();
   const dateTimeStamp = date.valueOf();
-  // 如果不在这个年份就需要渲染年份
   if (year !== dateYear) return date.format('YYYY-MM-DD');
-  // 如果不在今天就渲染年月
   if (dateTimeStamp < todayZeroTimeStamp) return date.format('MM-DD HH:mm');
-  // 否则渲染时分
   return date.format('HH:mm');
 };
 </script>
 
 <style lang="less" scoped>
-// 减去搜索和外边距高度
 .content-container {
   height: calc(100% - 58px);
   padding: 6px 12px 20px;
@@ -285,13 +249,11 @@ const getTime = (time: Date) => {
         opacity: 1;
         min-height: 30px;
         padding: 24px 14px 14px;
-        // background-color: @background-sub-color;
       }
     }
 
     .empty-item {
       animation: fadeintop 0.6s forwards;
-      // background-color: @background-sub-color;
       transition: all 0.4s;
     }
 

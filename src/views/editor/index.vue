@@ -10,11 +10,11 @@
   <main class="page-editor" :class="pageClass">
     <section class="editor-container">
       <IEditor
+        ref="editorRef"
         :uid="uid"
-        v-model="iEditorMarkdown"
-        :content="iEditorHtml"
+        v-model="editorContent"
         :className="currentBgClassName"
-        @on-input="changeEditContent"
+        @on-input="onEditorInput"
       />
     </section>
   </main>
@@ -45,8 +45,9 @@ const currentBgClassName = ref('');
 const route = useRoute();
 let currentWindowLabel = '';
 
-const iEditorMarkdown = ref('');
-const iEditorHtml = ref('');
+const editorContent = ref('');
+const editorRef = ref<InstanceType<typeof IEditor> | null>(null);
+
 /**
  * 焦点状态
  * - `false`: 获得焦点
@@ -60,6 +61,10 @@ const currentWindowBlurState = ref(false);
 const lockState = ref(false);
 
 const isNewNote = ref(false);
+
+// 保存防抖
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const SAVE_DEBOUNCE_MS = 500;
 
 onBeforeMount(async () => {
   await noteService.initialize();
@@ -81,15 +86,15 @@ const initEditorContent = async () => {
 
   if (existingNote) {
     isNewNote.value = false;
-    await getCurUidItem(routeUid);
+    await loadNoteContent(routeUid);
   } else {
     isNewNote.value = true;
     try {
       await noteService.createNote({
         uid: uid.value,
         title: '',
-        content: '',
-        markdown: '',
+        md_content: '',
+        html_snapshot: '',
         color: '',
       });
     } catch (error) {
@@ -98,13 +103,12 @@ const initEditorContent = async () => {
   }
 };
 
-const getCurUidItem = async (uid: string) => {
+const loadNoteContent = async (noteUid: string) => {
   try {
-    const info = await noteService.getNoteByUid(uid);
+    const info = await noteService.getNoteByUid(noteUid);
     if (!info) return;
     currentBgClassName.value = info.color || '';
-    iEditorHtml.value = info.content || '';
-    iEditorMarkdown.value = info.markdown || info.content || '';
+    editorContent.value = info.md_content || '';
   } catch (error) {
     console.error('获取便签失败:', error);
   }
@@ -117,71 +121,81 @@ const clickOption = () => {
 const changeBgClassName = (className: string) => {
   if (currentBgClassName.value === className) return;
   currentBgClassName.value = className;
-  updateData('className');
+  saveColor();
   showOptionsStatus.value = false;
 };
 
-const changeEditContent = (contentHtml: string, markdown: string) => {
-  iEditorHtml.value = contentHtml;
-  iEditorMarkdown.value = markdown;
-  if (!uid.value) return false;
-  updateData('content');
+/** 编辑器内容变更（带防抖保存） */
+const onEditorInput = (markdown: string) => {
+  editorContent.value = markdown;
+  if (!uid.value) return;
+  debouncedSaveContent();
 };
 
-const getInterceptionHTML = async () => {
-  const domHtml = new DOMParser().parseFromString(iEditorHtml.value, 'text/html');
-  let interceptionHTML = '';
-  let nodeIndex = 10;
-  domHtml.body.childNodes.forEach((item, index) => {
-    if (item.nodeName === '#text') {
-      nodeIndex += 1;
-      return;
-    }
-    if (index > nodeIndex) return;
-    interceptionHTML += (item as Element).outerHTML;
-  });
-  return interceptionHTML;
+const debouncedSaveContent = () => {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveContent();
+  }, SAVE_DEBOUNCE_MS);
 };
 
-const updateData = async (updateType: 'className' | 'content') => {
-  const interceptionHTML = await getInterceptionHTML();
-  const dataJson: Record<string, any> = {
-    uid: uid.value,
-    content: iEditorHtml.value,
-    markdown: iEditorMarkdown.value,
-    className: currentBgClassName.value,
-    interception: interceptionHTML
-  };
+/** 从 CM6 DOM 提取快照并保存 */
+const saveContent = async () => {
+  const htmlSnapshot = (editorRef.value as any)?.getHtmlSnapshot?.() || '';
 
   try {
     await noteService.updateNoteByUid(uid.value, {
-      content: iEditorHtml.value,
-      markdown: iEditorMarkdown.value,
-      color: currentBgClassName.value
+      md_content: editorContent.value,
+      html_snapshot: htmlSnapshot,
     });
 
-    if (updateType === 'className') {
-      emit('updateNoteItem_className', {
+    if (isNewNote.value && editorContent.value.trim()) {
+      isNewNote.value = false;
+      emit('createNewNote', {
         uid: uid.value,
-        className: currentBgClassName.value
+        mdContent: editorContent.value,
+        htmlSnapshot,
+        className: currentBgClassName.value,
+        updatedAt: new Date(),
       });
     } else {
-      dataJson.updatedAt = new Date();
-      if (isNewNote.value && iEditorHtml.value.trim()) {
-        isNewNote.value = false;
-        emit('createNewNote', dataJson);
-      } else {
-        emit('updateNoteItem_content', dataJson);
-      }
+      emit('updateNoteItem_content', {
+        uid: uid.value,
+        mdContent: editorContent.value,
+        htmlSnapshot,
+        className: currentBgClassName.value,
+        updatedAt: new Date(),
+      });
     }
   } catch (error) {
-    console.error('更新便签失败:', error);
+    console.error('保存便签失败:', error);
+  }
+};
+
+const saveColor = async () => {
+  try {
+    await noteService.updateNoteByUid(uid.value, {
+      color: currentBgClassName.value,
+    });
+    emit('updateNoteItem_className', {
+      uid: uid.value,
+      className: currentBgClassName.value,
+    });
+  } catch (error) {
+    console.error('保存颜色失败:', error);
   }
 };
 
 const closeWindow = async () => {
+  // 关闭前立即保存（取消防抖，直接写入）
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    await saveContent();
+  }
+
   try {
-    if (isNewNote.value && !iEditorHtml.value?.trim()) {
+    if (isNewNote.value && !editorContent.value.trim()) {
       try {
         await noteService.deleteNoteByUid(uid.value);
         emit('removeEmptyNoteItem', uid.value);
@@ -269,7 +283,6 @@ watch(() => notesState.value.switchStatus.autoNarrow, immersionHandle);
   height: 100%;
   background-color: @white-color;
   padding-top: @iconSize;
-  // padding-bottom: @iconSize;
   box-sizing: border-box;
   transition: padding 0.4s;
 
@@ -277,12 +290,6 @@ watch(() => notesState.value.switchStatus.autoNarrow, immersionHandle);
     width: 100%;
     height: 100%;
     overflow: hidden;
-
-    textarea {
-      width: 100%;
-      height: 370px;
-      display: block;
-    }
   }
 }
 

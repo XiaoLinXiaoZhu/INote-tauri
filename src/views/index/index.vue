@@ -18,7 +18,7 @@ import { computed, defineAsyncComponent, ref, onMounted } from 'vue';
 import Search from './components/Search.vue';
 
 import { windowManager } from '@/service/windowManager';
-import { DBNotesType, DBNotesListType } from '@/types/notes';
+import { NoteListItem } from '@/types/notes';
 import Empty from './components/Empty.vue';
 import ILoading from '@/components/ILoading.vue';
 
@@ -29,7 +29,7 @@ const List = defineAsyncComponent({
   loadingComponent: ILoading
 });
 
-const viewNotesList = ref<DBNotesListType[]>([]);
+const viewNotesList = ref<NoteListItem[]>([]);
 const searchValue = ref('');
 /**
  * 控制主页的显示接面
@@ -53,7 +53,7 @@ const openNewWindow = async () => {
   }
 };
 
-const searchHandle = (data: DBNotesType[], value: string) => {
+const searchHandle = (data: NoteListItem[], value: string) => {
   searchValue.value = value;
   if (!data.length && value) {
     blockState.value = 3;

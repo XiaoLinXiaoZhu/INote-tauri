@@ -1,81 +1,48 @@
 <template>
-  <div class="editor-markdown vditor" :class="className" ref="editorRef" @contextmenu.prevent="contextMenu" />
+  <div
+    class="editor-markdown"
+    :class="className"
+    ref="editorContainer"
+    @contextmenu.prevent="contextMenu"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
-import Vditor from 'vditor';
-import 'vditor/dist/index.css';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { createEditor } from '@xlxz/markdown-editor';
+import type { EditorInstance, EditorBackend } from '@xlxz/markdown-editor';
 import CreateRightClick, { MenuOptions } from '@/components/IRightClick';
 import { constImagesPath } from '@/config';
 import { uuid } from '@/utils';
 import { windowManager } from '@/service/windowManager';
-import useMessage from '@/components/IMessage';
-import { copyImage, fileToBuffer } from '@/utils/file';
+import { copyImage } from '@/utils/file';
 import { open as openShell } from '@tauri-apps/plugin-shell';
 import { join } from '@tauri-apps/api/path';
 import { exists, mkdir, writeFile } from '@tauri-apps/plugin-fs';
 import { appDataDir } from '@tauri-apps/api/path';
-
-const toolbar: IMenuItem[] = [
-  {
-    name: 'bold',
-    icon: '<i class="iconfont icon-editor-bold"></i>'
-  },
-  {
-    name: 'italic',
-    icon: '<i class="iconfont icon-italic"></i>'
-  },
-  {
-    name: 'line',
-    icon: '<i class="iconfont icon-underline"></i>'
-  },
-  {
-    name: 'strike',
-    icon: '<i class="iconfont icon-strikethrough"></i>'
-  },
-  {
-    name: 'list',
-    icon: '<i class="iconfont icon-ul"></i>'
-  },
-  {
-    name: 'list',
-    icon: '<i class="iconfont icon-ol"></i>'
-  },
-  {
-    name: 'code',
-    icon: '<i class="iconfont icon-code"></i>'
-  }
-];
 
 const props = defineProps({
   uid: {
     type: String,
     default: ''
   },
-  // 返回markdown
   modelValue: {
     type: String,
     default: ''
   },
-  // 返回html
-  content: {
-    type: String,
-    default: ''
-  },
-  className: String,
-  getHtml: {
-    type: Function
-  }
+  className: String
 });
+
 const emits = defineEmits(['on-input', 'update:modelValue']);
-const editorRef = ref();
-const vditor = ref<Vditor>();
+const editorContainer = ref<HTMLElement>();
 const rightClick = new CreateRightClick();
 const currentItemImagePath = ref<string>('');
 
-// 初始化图片路径
+let editor: EditorInstance | null = null;
+let isInternalChange = false;
+
 onMounted(async () => {
+  // 初始化图片路径
   try {
     const appDataPath = await appDataDir();
     currentItemImagePath.value = await join(appDataPath, constImagesPath.replace('/', ''));
@@ -83,74 +50,69 @@ onMounted(async () => {
     console.error('初始化图片路径失败:', error);
     currentItemImagePath.value = './images';
   }
+
+  loadEditor();
 });
+
+onBeforeUnmount(() => {
+  if (editor) {
+    editor.destroy();
+    editor = null;
+  }
+});
+
 const urlRegExp = /^(((ht|f)tps?):\/\/)?([^!@#$%^&*?.\s-]([^!@#$%^&*?.\s]{0,63}[^!@#$%^&*?.\s])?\.)+[a-z]{2,6}\/?/;
 
-const loadVditor = () => {
-  vditor.value = new Vditor(editorRef.value as HTMLElement, {
-    cache: {
-      enable: false
+const loadEditor = () => {
+  if (!editorContainer.value) return;
+
+  const backend: EditorBackend = {
+    async saveAttachment(name: string, data: ArrayBuffer) {
+      const uuidStr = uuid();
+      const extName = name.split('.').pop() || 'png';
+      await createImageDir();
+      const imagePath = await join(currentItemImagePath.value, props.uid, `${uuidStr}.${extName}`);
+      await writeFile(imagePath, new Uint8Array(data));
+      return `atom:///${imagePath}`;
+    }
+  };
+
+  editor = createEditor(editorContainer.value, {
+    doc: props.modelValue,
+    filePath: `${props.uid}.md`,
+    theme: 'light',
+    showLineNumber: false,
+    showIndentGuide: false,
+    foldHeading: false,
+    foldIndent: false,
+    readableLineWidth: false,
+    onChange(doc: string) {
+      isInternalChange = true;
+      emits('update:modelValue', doc);
+      emits('on-input', doc);
+      isInternalChange = false;
     },
-    linkPrefix: '#',
-    toolbar,
-    undoDelay: 0,
-    value: props.modelValue,
-    placeholder: '记笔记...',
-    input: value => {
-      emits('on-input', vditor.value?.getHTML(), value);
-      emits('update:modelValue', value);
-    },
-    after: () => {
-      vditorLoad();
-    },
-    link: {
-      isOpen: false,
-      click: el => {
-        // 从浏览器打开链接
-        if (urlRegExp.test(el.textContent!)) {
-          openShell(el.textContent!);
-        }
+    onLinkClick(linktext: string) {
+      if (urlRegExp.test(linktext)) {
+        openShell(linktext);
       }
     },
-    image: {
-      isPreview: false,
-      preview: async (img: Element) => {
-        const devicePixelRatio = window.devicePixelRatio;
-        const naturalWidth = (img as HTMLImageElement).naturalWidth / devicePixelRatio;
-        const naturalHeight = (img as HTMLImageElement).naturalHeight / devicePixelRatio;
-        const { availWidth, availHeight } = window.screen;
-        const width = Math.min(Math.max(naturalWidth, 500), availWidth);
-        const height = Math.min(Math.max(naturalHeight, 300), availHeight);
-        await windowManager.openImagePreview((img as HTMLImageElement).src, width, height);
-      }
-    },
-    upload: {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      handler: async files => {
-        insertImage(files[0]);
-      }
+    onExternalLinkClick(url: string) {
+      openShell(url);
+    }
+  }, backend);
+
+  // 聚焦并滚动到底部
+  editor.focus();
+  requestAnimationFrame(() => {
+    const cmContent = editorContainer.value?.querySelector('.cm-content');
+    if (cmContent) {
+      cmContent.scrollTop = cmContent.scrollHeight;
     }
   });
 };
 
-/** 写入图片 */
-const insertImage = async (file: File | Blob) => {
-  if (!file) return '';
-  await createImageUrl();
-  const uuidStr = uuid();
-  const extName = file.type.split('/')[1];
-  const imagePath = await join(currentItemImagePath.value, props.uid, `${uuidStr}.${extName}`);
-  const buffer = await fileToBuffer(file);
-  await writeFile(imagePath, new Uint8Array(buffer)).catch((err: any) => {
-    useMessage(err.message, 'error');
-  });
-  const htmlImagePath = `![${uuidStr}](atom:///${imagePath})`;
-  vditor.value?.insertValue(htmlImagePath);
-};
-
-const createImageUrl = async () => {
-  console.log(currentItemImagePath.value);
+const createImageDir = async () => {
   if (!await exists(currentItemImagePath.value)) {
     await mkdir(currentItemImagePath.value, { recursive: true });
   }
@@ -160,50 +122,52 @@ const createImageUrl = async () => {
   }
 };
 
-onMounted(() => {
-  loadVditor();
-});
-
-// 监听内容变化
+// 外部内容变更时同步到编辑器
 watch(() => props.modelValue, (newValue) => {
-  if (vditor.value && newValue !== vditor.value.getValue()) {
-    vditor.value.setValue(newValue);
+  if (isInternalChange) return;
+  if (editor && newValue !== editor.getDoc()) {
+    editor.setDoc(newValue);
   }
 });
 
-/** 编辑器加载完毕 */
-const vditorLoad = () => {
-  vditor.value?.setValue(props.modelValue);
-  vditor.value?.focus();
-  // vditor的内容容器
-  const editorContainer = document.querySelector('.vditor-ir .vditor-reset');
-  const editorScrollHeight = editorContainer?.scrollHeight ?? 0;
-  editorContainer!.scrollTop = editorScrollHeight;
+/** 获取编辑器 DOM 快照 HTML */
+const getHtmlSnapshot = (): string => {
+  if (!editorContainer.value) return '';
+  const cmContent = editorContainer.value.querySelector('.cm-content');
+  if (!cmContent) return '';
+  // 取前 10 个子节点作为预览快照
+  let snapshotHtml = '';
+  const children = cmContent.children;
+  const maxNodes = Math.min(children.length, 10);
+  for (let i = 0; i < maxNodes; i++) {
+    snapshotHtml += children[i].outerHTML;
+  }
+  return snapshotHtml;
 };
+
+defineExpose({ getHtmlSnapshot });
 
 /** 编辑器内右键 */
 const contextMenu = (event: MouseEvent) => {
-  const selectionValue = vditor.value?.getSelection();
   const target = event.target as HTMLElement;
   const targetName = target.tagName;
+  const selection = editor?.getSelection() || '';
 
   const menuList: MenuOptions[] = [
     {
       text: '复制',
       once: true,
       iconName: ['iconfont', 'icon-copy'],
-      disabled: targetName !== 'IMG' && !selectionValue,
+      disabled: targetName !== 'IMG' && !selection,
       handler: () => {
-        // 判断点击节点
         switch (targetName) {
           case 'IMG':
             copyImage(target as HTMLImageElement);
             break;
-          case 'A':
-            break;
           default:
-            const text = vditor.value?.getSelection();
-            navigator.clipboard.writeText(text as string);
+            if (selection) {
+              navigator.clipboard.writeText(selection);
+            }
         }
       }
     },
@@ -211,147 +175,116 @@ const contextMenu = (event: MouseEvent) => {
       text: '粘贴',
       once: true,
       iconName: ['iconfont', 'icon-niantie'],
-      // disabled: async () => {
-      //   const disabledStatus = await window.navigator.clipboard.read().catch(() => {
-      //     return false;
-      //   });
-      //   return disabledStatus;
-      // },
       handler: async () => {
-        // 获取剪切板的数据
-        console.log(await window.navigator.clipboard.read());
-        const clipboardList = await window.navigator.clipboard.read().catch(() => {
-          return [];
-        });
-        if (clipboardList && clipboardList.length) {
+        try {
+          const clipboardList = await window.navigator.clipboard.read();
+          if (!clipboardList || !clipboardList.length) return;
+
           const firstClipboard = clipboardList[0];
           if (!firstClipboard) return;
 
-          const firstClipboardTypes = firstClipboard.types;
+          const types = firstClipboard.types;
 
           // 粘贴图片
-          if (firstClipboardTypes && firstClipboardTypes[0].includes('image')) {
-            insertImage(await firstClipboard.getType(firstClipboardTypes[0]));
-            return;
-          }
-
-          // 粘贴html
-          if (
-            firstClipboardTypes &&
-            firstClipboardTypes.includes('text/html') &&
-            firstClipboardTypes.includes('text/plain')
-          ) {
-            const html = await (await firstClipboard.getType('text/html')).text();
-            console.log('html', html);
-            vditor.value?.insertValue(html.substring(0, html.length - 18));
+          if (types[0]?.includes('image')) {
+            const blob = await firstClipboard.getType(types[0]);
+            const buffer = await blob.arrayBuffer();
+            const ext = types[0].split('/')[1] || 'png';
+            await createImageDir();
+            const uuidStr = uuid();
+            const imagePath = await join(currentItemImagePath.value, props.uid, `${uuidStr}.${ext}`);
+            await writeFile(imagePath, new Uint8Array(buffer));
+            const mdImage = `![${uuidStr}](atom:///${imagePath})`;
+            // 通过 CM6 view 插入
+            if (editor) {
+              const view = editor.view;
+              const { from } = view.state.selection.main;
+              view.dispatch({ changes: { from, insert: mdImage } });
+            }
             return;
           }
 
           // 粘贴文本
-          if (firstClipboardTypes && firstClipboardTypes.includes('text/plain')) {
+          if (types.includes('text/plain')) {
             const text = await (await firstClipboard.getType('text/plain')).text();
-            console.log('text', text);
-            vditor.value?.insertValue(text);
+            if (editor) {
+              const view = editor.view;
+              const { from, to } = view.state.selection.main;
+              view.dispatch({ changes: { from, to, insert: text } });
+            }
           }
+        } catch (error) {
+          console.error('粘贴失败:', error);
         }
       }
     }
   ];
 
-  if (targetName === 'A') {
-    const menuItem: MenuOptions = {
-      text: '打开链接',
-      once: true,
-      iconName: ['iconfont', 'icon-niantie']
-    };
-    menuList.unshift(menuItem);
-  }
   if (targetName === 'IMG') {
     const targetImg = target as HTMLImageElement;
     if (targetImg.src.startsWith('atom')) {
-      const openFolderMenuItem: MenuOptions = {
+      menuList.unshift({
         text: '打开所在文件夹',
         once: true,
         iconName: ['iconfont', 'icon-folderOpen'],
         handler: () => {
-          // TODO 兼容mac
           openShell(targetImg.src.replace('atom:///', ''), 'folder');
         }
-      };
-      menuList.unshift(openFolderMenuItem);
-      const openImageMenuItem: MenuOptions = {
+      });
+      menuList.unshift({
         text: '打开图片',
         once: true,
         iconName: ['iconfont', 'icon-tupian'],
         handler: () => {
-          // TODO 兼容mac
           openShell(targetImg.src.replace('atom:///', ''));
         }
-      };
-      menuList.unshift(openImageMenuItem);
+      });
     }
+    // 图片预览
+    menuList.unshift({
+      text: '预览图片',
+      once: true,
+      iconName: ['iconfont', 'icon-tupian'],
+      handler: async () => {
+        const devicePixelRatio = window.devicePixelRatio;
+        const naturalWidth = targetImg.naturalWidth / devicePixelRatio;
+        const naturalHeight = targetImg.naturalHeight / devicePixelRatio;
+        const { availWidth, availHeight } = window.screen;
+        const width = Math.min(Math.max(naturalWidth, 500), availWidth);
+        const height = Math.min(Math.max(naturalHeight, 300), availHeight);
+        await windowManager.openImagePreview(targetImg.src, width, height);
+      }
+    });
   }
+
   rightClick.useRightClick(event, menuList);
 };
 </script>
 
 <style lang="less" scoped>
 .editor-markdown {
-  border: none;
-  width: 100% !important;
-  height: 100% !important;
-  flex-direction: column-reverse;
-}
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
-&:deep(.vditor-toolbar) {
-  padding: 0 !important;
-  background-color: transparent;
-  border-bottom: none;
-  height: 40px;
-  position: relative;
-  top: 0;
-  transition: top 0.4s, height 0.4s;
-
-  .vditor-toolbar__item {
-    width: 40px;
-    height: 40px;
-    max-height: 40px;
-    max-width: 40px;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  :deep(.cm-editor) {
+    flex: 1;
+    overflow: hidden;
+    background-color: transparent;
   }
 
-  .vditor-tooltipped,
-  .vditor-tooltipped__s {
-    padding: 0;
-    width: 100%;
-    height: 100%;
-
-    &:hover {
-      color: #000;
-      background-color: rgba(0, 0, 0, 0.1);
-    }
+  :deep(.cm-scroller) {
+    overflow: auto;
   }
-}
 
-&:deep(.vditor-menu--current) {
-  color: #000 !important;
-  background-color: rgba(0, 0, 0, 0.1) !important;
-}
+  :deep(.cm-content) {
+    padding: 8px 16px;
+  }
 
-&:deep(.vditor-ir pre.vditor-reset) {
-  background-color: transparent;
-}
-
-// 加粗 **
-&:deep(.vditor-ir__node--expand .vditor-ir__marker--bi) {
-  color: #000;
-}
-
-// 标题 #
-&:deep(.vditor-ir__node--expand .vditor-ir__marker--heading) {
-  color: #000;
+  :deep(.cm-focused) {
+    outline: none;
+  }
 }
 </style>

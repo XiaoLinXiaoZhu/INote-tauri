@@ -14,47 +14,33 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { noteService } from '@/service/tauriNoteService';
-
-console.log('🚀 Search component loaded');
+import type { NoteListItem } from '@/types/notes';
 
 const emits = defineEmits(['onSearch']);
 const searchValue = ref('');
 
 onMounted(async () => {
-  console.log('🚀 Search component mounted, performing initial search');
-  try {
-    await searchDb();
-    console.log('🚀 Initial search completed');
-  } catch (error) {
-    console.error('❌ Initial search failed:', error);
-  }
+  await searchDb();
 });
 
 const searchDb = async () => {
-  console.log('🚀 Searching database with value:', searchValue.value);
   try {
-    // 如果有搜索内容，使用搜索功能；否则获取所有笔记
-    const data = searchValue.value 
+    const data = searchValue.value
       ? await noteService.searchNotes(searchValue.value)
       : await noteService.getAllNotes();
-    
-    console.log('🚀 Database search result:', data);
-    
-    // 转换数据格式以保持兼容性
-    const formattedData = data.map(note => ({
-      uid: note.title,
+
+    const formattedData: NoteListItem[] = data.map(note => ({
+      uid: note.uid || '',
       className: note.color || '',
-      content: note.content,
-      markdown: note.content,
-      interception: note.content.substring(0, 500),
-      createdAt: note.created_at,
-      updatedAt: note.updated_at
+      mdContent: note.md_content || '',
+      htmlSnapshot: note.html_snapshot || '',
+      createdAt: new Date(note.created_at || ''),
+      updatedAt: new Date(note.updated_at || ''),
     }));
-    
-    console.log('🚀 Formatted data:', formattedData);
+
     emits('onSearch', formattedData, searchValue.value);
   } catch (error) {
-    console.error('❌ 搜索笔记失败:', error);
+    console.error('搜索笔记失败:', error);
     emits('onSearch', [], searchValue.value);
   }
 };

@@ -15,10 +15,26 @@
   <link rel="stylesheet" href="/font/iconfont.css">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/vendor/app.css">
 </head>
 
-<body>
+<body class="theme-light">
   <div id="app" class="app app-show" ondragstart="return false"></div>
+
+  <!-- 设置资源基路径，供 vendor 脚本运行时加载子资源（MathJax 等）使用 -->
+  <script>window.__assetBase = new URL('.', window.location.href).pathname.replace(/\/$/, '');</script>
+
+  <!-- Obsidian 运行时（顺序重要） -->
+  <script src="/vendor/lib/i18next.min.js"></script>
+  <script src="/vendor/lib/codemirror.js"></script>
+  <script src="/vendor/lib/meta.min.js"></script>
+  <script src="/vendor/lib/modes.min.js"></script>
+  <script src="/vendor/lib/markdown.js"></script>
+  <script src="/vendor/lib/turndown.js"></script>
+  <script src="/vendor/enhance.js"></script>
+  <script src="/vendor/mock.js"></script>
+  <script src="/vendor/obsidian-app.patched.js"></script>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 

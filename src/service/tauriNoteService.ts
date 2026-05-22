@@ -4,8 +4,8 @@ export interface NoteModel {
   id?: number;
   uid?: string;
   title: string;
-  content: string;
-  markdown?: string; // 添加 markdown 字段
+  md_content: string;
+  html_snapshot: string;
   created_at?: string;
   updated_at?: string;
   color?: string;
@@ -18,7 +18,6 @@ class TauriNoteService {
   private isInitialized = false;
   private static instance: TauriNoteService | null = null;
 
-  // 单例模式，确保在多个窗口中共享同一个数据库实例
   static getInstance(): TauriNoteService {
     if (!TauriNoteService.instance) {
       TauriNoteService.instance = new TauriNoteService();
@@ -27,40 +26,23 @@ class TauriNoteService {
   }
 
   async initialize() {
-    // 如果已经初始化，直接返回
-    if (this.isInitialized) {
-      console.log('🚀 Database already initialized, skipping...');
-      return;
-    }
-    
-    // 如果正在初始化，等待初始化完成
-    if (this.initPromise) {
-      console.log('🚀 Database initialization in progress, waiting...');
-      return this.initPromise;
-    }
-    
+    if (this.isInitialized) return;
+    if (this.initPromise) return this.initPromise;
     this.initPromise = this._initialize();
     return this.initPromise;
   }
 
   private async _initialize() {
-    console.log('🚀 Initializing Tauri database service');
     try {
-      console.log('🚀 Loading database...');
       this.db = await Database.load('sqlite:i-notes.db');
-      console.log('🚀 Database loaded successfully');
-      
-      console.log('🚀 Creating/checking tables...');
       await this.createTables();
-      console.log('🚀 Tables created/checked successfully');
-      
       this.isInitialized = true;
     } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
+      console.error('Failed to initialize database:', error);
       throw error;
     }
   }
-  
+
   private async ensureInitialized() {
     if (!this.isInitialized && this.initPromise) {
       await this.initPromise;
@@ -72,91 +54,32 @@ class TauriNoteService {
 
   private async createTables() {
     if (!this.db) return;
-    
-    // 先检查表是否存在，如果存在则添加 uid 列
-    try {
-      const tableExists = await this.db.select(`
-        SELECT name FROM sqlite_master WHERE type='table' AND name='notes'
-      `) as any[];
-      
-      if (tableExists.length > 0) {
-        // 表存在，检查是否有 uid 列和 markdown 列
-        const columns = await this.db.select(`PRAGMA table_info(notes)`) as any[];
-        const hasUidColumn = columns.some((col: any) => col.name === 'uid');
-        const hasMarkdownColumn = columns.some((col: any) => col.name === 'markdown');
-        
-        if (!hasUidColumn) {
-          // 添加 uid 列
-          await this.db.execute('ALTER TABLE notes ADD COLUMN uid TEXT');
-          
-          // 为现有记录生成 uid
-          const existingNotes = await this.db.select('SELECT id FROM notes') as any[];
-          for (const note of existingNotes) {
-            const uid = this.generateUid();
-            await this.db.execute('UPDATE notes SET uid = ? WHERE id = ?', [uid, note.id]);
-          }
-        }
-        
-        if (!hasMarkdownColumn) {
-          // 添加 markdown 列
-          await this.db.execute('ALTER TABLE notes ADD COLUMN markdown TEXT DEFAULT ""');
-        }
-      } else {
-        // 表不存在，创建新表
-        const createNotesTable = `
-          CREATE TABLE notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            uid TEXT UNIQUE,
-            title TEXT NOT NULL DEFAULT '',
-            content TEXT NOT NULL DEFAULT '',
-            markdown TEXT DEFAULT '',
-            color TEXT DEFAULT '#ffd54f',
-            is_pinned BOOLEAN DEFAULT FALSE,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-          )
-        `;
-        await this.db.execute(createNotesTable);
-      }
-    } catch (error) {
-      console.error('Database migration error:', error);
-      throw error;
-    }
-  }
 
-  private generateUid(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    // 不做迁移，直接确保表结构正确
+    await this.db.execute(`
+      CREATE TABLE IF NOT EXISTS notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uid TEXT UNIQUE,
+        title TEXT NOT NULL DEFAULT '',
+        md_content TEXT NOT NULL DEFAULT '',
+        html_snapshot TEXT NOT NULL DEFAULT '',
+        color TEXT DEFAULT '',
+        is_pinned BOOLEAN DEFAULT FALSE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
   }
 
   async getAllNotes(): Promise<NoteModel[]> {
-    console.log('🚀 Getting all notes from database');
     await this.ensureInitialized();
-    
-    try {
-      const result = await this.db!.select<NoteModel[]>(
-        'SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC'
-      );
-      console.log('🚀 getAllNotes result:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Error getting all notes:', error);
-      throw error;
-    }
-  }
-
-  async getNoteById(id: number): Promise<NoteModel | null> {
-    await this.ensureInitialized();
-    
-    const result = await this.db!.select<NoteModel[]>(
-      'SELECT * FROM notes WHERE id = ?',
-      [id]
+    return await this.db!.select<NoteModel[]>(
+      'SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC'
     );
-    return result.length > 0 ? result[0] : null;
   }
 
   async getNoteByUid(uid: string): Promise<NoteModel | null> {
     await this.ensureInitialized();
-    
     const result = await this.db!.select<NoteModel[]>(
       'SELECT * FROM notes WHERE uid = ?',
       [uid]
@@ -164,34 +87,32 @@ class TauriNoteService {
     return result.length > 0 ? result[0] : null;
   }
 
-  async createNote(note: Omit<NoteModel, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
+  async createNote(note: { uid: string; title: string; md_content: string; html_snapshot: string; color: string }): Promise<number> {
     await this.ensureInitialized();
-    
     const result = await this.db!.execute(
-      'INSERT INTO notes (uid, title, content, markdown, color, is_pinned) VALUES (?, ?, ?, ?, ?, ?)',
-      [note.uid || '', note.title, note.content, note.markdown || '', note.color || '#ffd54f', note.is_pinned || false]
+      'INSERT INTO notes (uid, title, md_content, html_snapshot, color, is_pinned) VALUES (?, ?, ?, ?, ?, ?)',
+      [note.uid, note.title, note.md_content, note.html_snapshot, note.color || '', false]
     );
-    
     return result.lastInsertId || 0;
   }
 
-  async updateNote(id: number, note: Partial<NoteModel>): Promise<void> {
+  async updateNoteByUid(uid: string, note: Partial<Pick<NoteModel, 'title' | 'md_content' | 'html_snapshot' | 'color' | 'is_pinned'>>): Promise<void> {
     await this.ensureInitialized();
-    
-    const fields = [];
-    const values = [];
-    
+
+    const fields: string[] = [];
+    const values: any[] = [];
+
     if (note.title !== undefined) {
       fields.push('title = ?');
       values.push(note.title);
     }
-    if (note.content !== undefined) {
-      fields.push('content = ?');
-      values.push(note.content);
+    if (note.md_content !== undefined) {
+      fields.push('md_content = ?');
+      values.push(note.md_content);
     }
-    if (note.markdown !== undefined) {
-      fields.push('markdown = ?');
-      values.push(note.markdown);
+    if (note.html_snapshot !== undefined) {
+      fields.push('html_snapshot = ?');
+      values.push(note.html_snapshot);
     }
     if (note.color !== undefined) {
       fields.push('color = ?');
@@ -201,70 +122,12 @@ class TauriNoteService {
       fields.push('is_pinned = ?');
       values.push(note.is_pinned);
     }
-    
-    fields.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(id);
-    
-    await this.db!.execute(
-      `UPDATE notes SET ${fields.join(', ')} WHERE id = ?`,
-      values
-    );
-  }
 
-  async deleteNote(id: number): Promise<void> {
-    await this.ensureInitialized();
-    
-    // 先获取便签的UID以便清理窗口配置
-    const note = await this.db!.select<NoteModel[]>(
-      'SELECT uid FROM notes WHERE id = ?',
-      [id]
-    );
-    
-    // 删除便签数据
-    await this.db!.execute('DELETE FROM notes WHERE id = ?', [id]);
-    
-    // 如果找到了UID，清理相关的窗口配置
-    if (note.length > 0 && note[0].uid) {
-      try {
-        const { windowManager } = await import('./windowManager');
-        await windowManager.deleteWindowConfig(`editor_${note[0].uid}`);
-        console.log(`✅ Window config cleaned for deleted note ${note[0].uid}`);
-      } catch (error) {
-        console.warn(`⚠️ Failed to clean window config for note ${note[0].uid}:`, error);
-      }
-    }
-  }
+    if (fields.length === 0) return;
 
-  async updateNoteByUid(uid: string, note: Partial<NoteModel>): Promise<void> {
-    await this.ensureInitialized();
-    
-    const fields = [];
-    const values = [];
-    
-    if (note.title !== undefined) {
-      fields.push('title = ?');
-      values.push(note.title);
-    }
-    if (note.content !== undefined) {
-      fields.push('content = ?');
-      values.push(note.content);
-    }
-    if (note.markdown !== undefined) {
-      fields.push('markdown = ?');
-      values.push(note.markdown);
-    }
-    if (note.color !== undefined) {
-      fields.push('color = ?');
-      values.push(note.color);
-    }
-    if (note.is_pinned !== undefined) {
-      fields.push('is_pinned = ?');
-      values.push(note.is_pinned);
-    }
-    
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(uid);
-    
+
     await this.db!.execute(
       `UPDATE notes SET ${fields.join(', ')} WHERE uid = ?`,
       values
@@ -273,28 +136,22 @@ class TauriNoteService {
 
   async deleteNoteByUid(uid: string): Promise<void> {
     await this.ensureInitialized();
-    
-    // 删除便签数据
     await this.db!.execute('DELETE FROM notes WHERE uid = ?', [uid]);
-    
-    // 清理相关的窗口配置
+
     try {
       const { windowManager } = await import('./windowManager');
       await windowManager.deleteWindowConfig(`editor_${uid}`);
-      console.log(`✅ Window config cleaned for deleted note ${uid}`);
     } catch (error) {
-      console.warn(`⚠️ Failed to clean window config for note ${uid}:`, error);
+      console.warn('Failed to clean window config:', error);
     }
   }
 
   async searchNotes(keyword: string): Promise<NoteModel[]> {
     await this.ensureInitialized();
-    
-    const result = await this.db!.select<NoteModel[]>(
-      'SELECT * FROM notes WHERE title LIKE ? OR content LIKE ? ORDER BY is_pinned DESC, updated_at DESC',
+    return await this.db!.select<NoteModel[]>(
+      'SELECT * FROM notes WHERE title LIKE ? OR md_content LIKE ? ORDER BY is_pinned DESC, updated_at DESC',
       [`%${keyword}%`, `%${keyword}%`]
     );
-    return result;
   }
 }
 

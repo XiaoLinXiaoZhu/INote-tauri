@@ -1,6 +1,6 @@
 <template>
   <div
-    class="editor-markdown"
+    class="editor-markdown markdown-source-view mod-cm6 is-live-preview"
     :class="className"
     ref="editorContainer"
     @contextmenu.prevent="contextMenu"
@@ -81,10 +81,6 @@ const loadEditor = () => {
     doc: props.modelValue,
     filePath: `${props.uid}.md`,
     theme: 'light',
-    showLineNumber: false,
-    showIndentGuide: false,
-    foldHeading: false,
-    foldIndent: false,
     readableLineWidth: false,
     onChange(doc: string) {
       isInternalChange = true;
@@ -285,6 +281,20 @@ const contextMenu = (event: MouseEvent) => {
 
   :deep(.cm-focused) {
     outline: none;
+  }
+
+  :deep(.cm-scroller)::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  :deep(.cm-scroller)::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  :deep(.cm-scroller)::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
 </style>

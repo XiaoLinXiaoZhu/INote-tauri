@@ -206,61 +206,24 @@ body {
 }
 
 
-/* 针对富文本做特定的样式 */
-.black-content .vditor-copy {
-  color: #24292D !important;
-}
-.black-content .vditor-copy span {
-  color: #24292D !important;
-}
-.black-content .vditor-copy path {
-  color: #24292D !important;
-}
 
-.black-content .vditor-ir__node--expand .vditor-ir__marker--heading {
-  color: #fff !important;
-}
-
+/* 黑色便签内文字为白色 */
 .black-content * {
   color: #fff;
 }
 
-.window-blur-hide .vditor-toolbar {
-  top: 40px !important;
-  height: 0 !important;
-  transition: top 0.4s, height 0.4s;
+/* 抵消 vendor/app.css 对全局 button 的样式污染 */
+button {
+  display: inline-block;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  padding: 0;
+  height: auto;
+  font-size: inherit;
+  font-weight: inherit;
+  border: none;
 }
-
-.vditor-toolbar {
-  box-shadow: 0 0 2px #ccc;
-}
-
-.vditor-reset p {
-  margin-bottom: 8px;
-}
-.vditor-reset img {
-  cursor: pointer;
-}
-.page-editor:not(.white-content) .vditor-reset blockquote {
-  border-left-color: #ababab !important;
-}
-.page-editor:not(.white-content) .vditor-reset h1, .vditor-reset h2 {
-  border-bottom-color: #ababab !important;
-}
-.page-editor:not(.white-content) .vditor-reset hr {
-  background-color: #d2d2d2 !important;
-}
-
-.vditor-img {
-  top: 40px !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-}
-
-.vditor-img__img img {
-  max-width: 100% !important;
-}
-
 
 @media (prefers-color-scheme: dark) {
   body,

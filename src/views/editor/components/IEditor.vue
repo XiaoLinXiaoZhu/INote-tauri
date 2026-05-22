@@ -275,6 +275,15 @@ const contextMenu = (event: MouseEvent) => {
     overflow: auto;
   }
 
+  :deep(.cm-gutters) {
+    margin-inline-end: 0;
+  }
+
+  :deep(.cm-lineNumbers .cm-gutterElement) {
+    text-align: right;
+    padding: 0 8px 0 4px;
+  }
+
   :deep(.cm-content) {
     padding: 8px 16px;
   }

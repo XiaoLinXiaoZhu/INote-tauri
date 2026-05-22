@@ -41,6 +41,7 @@ pub fn run() {
             let wm_state = WindowManagerState::new(config_store);
             app.manage(wm_state);
 
+
             // 为主窗口应用保存的配置
             if let Some(main_window) = app.get_webview_window("main") {
                 let state = app.state::<WindowManagerState>();
@@ -51,6 +52,7 @@ pub fn run() {
                     }
                 }
             }
+
 
             // 启动防抖保存定时器
             window_manager::start_debounce_timer(app.handle().clone());

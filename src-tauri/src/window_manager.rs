@@ -79,7 +79,7 @@ impl WindowManagerState {
 // ─── Tauri Commands ──────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), String> {
+pub async fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), String> {
     let label = format!("editor_{}", uid);
 
     // 去重：如果窗口已存在则激活
@@ -88,7 +88,6 @@ pub fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), String> {
         existing.set_focus().map_err(|e| e.to_string())?;
         return Ok(());
     }
-
     let state = app_handle.state::<WindowManagerState>();
 
     // 读取保存的配置
@@ -96,6 +95,13 @@ pub fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), String> {
 
     let width = saved_config.as_ref().map(|c| c.width as f64).unwrap_or(290.0);
     let height = saved_config.as_ref().map(|c| c.height as f64).unwrap_or(320.0);
+    let position = saved_config.as_ref().and_then(|c| {
+        match (c.x, c.y) {
+            (Some(x), Some(y)) => Some((x as f64, y as f64)),
+            _ => None,
+        }
+    });
+    let has_saved_config = saved_config.is_some();
 
     let dev_url = app_handle.config().build.dev_url.as_ref();
     let base_url = if dev_url.is_some() {
@@ -103,7 +109,6 @@ pub fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), String> {
     } else {
         "tauri://localhost"
     };
-
     let url = format!("{}/#/editor?uid={}", base_url, uid);
 
     let mut builder = WebviewWindowBuilder::new(&app_handle, &label, WebviewUrl::External(url.parse().map_err(|e: url::ParseError| e.to_string())?))
@@ -115,12 +120,9 @@ pub fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), String> {
         .transparent(true)
         .skip_taskbar(false);
 
-    // 如果有保存的位置则应用
-    if let Some(ref config) = saved_config {
-        if let (Some(x), Some(y)) = (config.x, config.y) {
-            builder = builder.position(x as f64, y as f64);
-        }
-    } else {
+    if let Some((x, y)) = position {
+        builder = builder.position(x, y);
+    } else if !has_saved_config {
         builder = builder.center();
     }
 
@@ -130,7 +132,7 @@ pub fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_image_preview(app_handle: AppHandle, src: String, width: f64, height: f64) -> Result<(), String> {
+pub async fn open_image_preview(app_handle: AppHandle, src: String, width: f64, height: f64) -> Result<(), String> {
     let label = format!("image_preview_{}", std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
@@ -162,7 +164,7 @@ pub fn open_image_preview(app_handle: AppHandle, src: String, width: f64, height
 }
 
 #[tauri::command]
-pub fn close_current_window(app_handle: AppHandle, label: String) -> Result<(), String> {
+pub async fn close_current_window(app_handle: AppHandle, label: String) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window(&label) {
         // 先立即保存配置
         let state = app_handle.state::<WindowManagerState>();
@@ -174,7 +176,7 @@ pub fn close_current_window(app_handle: AppHandle, label: String) -> Result<(), 
 }
 
 #[tauri::command]
-pub fn set_always_on_top(app_handle: AppHandle, label: String, value: bool) -> Result<(), String> {
+pub async fn set_always_on_top(app_handle: AppHandle, label: String, value: bool) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window(&label) {
         window.set_always_on_top(value).map_err(|e| e.to_string())?;
     }
@@ -182,7 +184,7 @@ pub fn set_always_on_top(app_handle: AppHandle, label: String, value: bool) -> R
 }
 
 #[tauri::command]
-pub fn delete_window_config(app_handle: AppHandle, window_id: String) -> Result<(), String> {
+pub async fn delete_window_config(app_handle: AppHandle, window_id: String) -> Result<(), String> {
     let state = app_handle.state::<WindowManagerState>();
     state.config_store.delete(&window_id)
 }
@@ -219,41 +221,72 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                 });
             }
         }
-        tauri::WindowEvent::CloseRequested { api, .. } => {
+        tauri::WindowEvent::CloseRequested { .. } => {
             let state = app_handle.state::<WindowManagerState>();
 
             // 立即保存配置
             state.flush_window(&label);
 
             if label == "main" {
-                // 检查是否还有编辑器窗口
                 let has_editors = app_handle.webview_windows()
                     .keys()
                     .any(|k| k.starts_with("editor_"));
 
-                if has_editors {
-                    // 有编辑器窗口时隐藏主窗口而非退出
-                    api.prevent_close();
-                    let _ = window.hide();
-                } else {
-                    // 无编辑器窗口，允许退出
+                if !has_editors {
+                    // 无编辑器窗口，退出应用
                     app_handle.exit(0);
                 }
+                // 有编辑器窗口时允许主窗口正常关闭，最后一个编辑器关闭时会重建主窗口
             }
             // 编辑器窗口和其他窗口正常关闭
         }
         tauri::WindowEvent::Destroyed => {
-            // 编辑器窗口被销毁后，检查是否需要恢复主窗口
             if label.starts_with("editor_") {
                 let has_editors = app_handle.webview_windows()
                     .keys()
                     .any(|k| k.starts_with("editor_") && k != &label);
 
-                if !has_editors {
-                    // 所有编辑器窗口都已关闭，恢复主窗口
-                    if let Some(main_window) = app_handle.get_webview_window("main") {
-                        let _ = main_window.show();
-                        let _ = main_window.set_focus();
+                if !has_editors && app_handle.get_webview_window("main").is_none() {
+                    // 所有编辑器关闭且主窗口已关闭，重新创建主窗口
+                    let state = app_handle.state::<WindowManagerState>();
+                    let saved = state.config_store.get("main").unwrap_or(None);
+
+                    let width = saved.as_ref().map(|c| c.width as f64).unwrap_or(400.0);
+                    let height = saved.as_ref().map(|c| c.height as f64).unwrap_or(600.0);
+
+                    let dev_url = app_handle.config().build.dev_url.as_ref();
+                    let base_url = if dev_url.is_some() {
+                        "http://localhost:1421"
+                    } else {
+                        "tauri://localhost"
+                    };
+                    let url = format!("{}/#/", base_url);
+
+                    if let Ok(parsed_url) = url.parse() {
+                        let mut builder = WebviewWindowBuilder::new(
+                            app_handle,
+                            "main",
+                            WebviewUrl::External(parsed_url),
+                        )
+                        .title("I便笺")
+                        .inner_size(width, height)
+                        .min_inner_size(300.0, 400.0)
+                        .resizable(true)
+                        .decorations(false)
+                        .transparent(true);
+
+                        if let Some(ref config) = saved {
+                            if let (Some(x), Some(y)) = (config.x, config.y) {
+                                builder = builder.position(x as f64, y as f64);
+                            }
+                        } else {
+                            builder = builder.center();
+                        }
+
+                        match builder.build() {
+                            Ok(_) => {},
+                            Err(e) => eprintln!("failed to recreate main window: {}", e),
+                        }
                     }
                 }
             }

@@ -48,7 +48,10 @@ pub fn run() {
                 if let Ok(Some(config)) = state.config_store.get("main") {
                     let _ = main_window.set_size(tauri::LogicalSize::new((config.width as f64).max(300.0), (config.height as f64).max(400.0)));
                     if let (Some(x), Some(y)) = (config.x, config.y) {
-                        let _ = main_window.set_position(tauri::LogicalPosition::new(x as f64, y as f64));
+                        // 过滤无效坐标（如最小化时保存的 -32000）
+                        if x > -10000 && y > -10000 {
+                            let _ = main_window.set_position(tauri::LogicalPosition::new(x as f64, y as f64));
+                        }
                     }
                 }
             }

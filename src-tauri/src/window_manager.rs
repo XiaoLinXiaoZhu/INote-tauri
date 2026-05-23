@@ -105,7 +105,7 @@ pub async fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), Strin
     let height = saved_config.as_ref().map(|c| c.height as f64).unwrap_or(320.0).max(EDITOR_MIN_HEIGHT);
     let position = saved_config.as_ref().and_then(|c| {
         match (c.x, c.y) {
-            (Some(x), Some(y)) => Some((x as f64, y as f64)),
+            (Some(x), Some(y)) if x > -10000 && y > -10000 => Some((x as f64, y as f64)),
             _ => None,
         }
     });
@@ -206,6 +206,10 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 
     match event {
         tauri::WindowEvent::Resized(size) => {
+            // 忽略最小化时的尺寸变化（Windows 会将窗口移到 -32000,-32000）
+            if window.is_minimized().unwrap_or(false) {
+                return;
+            }
             let state = app_handle.state::<WindowManagerState>();
             if let Ok(pos) = window.outer_position() {
                 state.record_config_change(WindowConfig {
@@ -218,6 +222,10 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
             }
         }
         tauri::WindowEvent::Moved(position) => {
+            // 忽略最小化时的位置变化
+            if window.is_minimized().unwrap_or(false) {
+                return;
+            }
             let state = app_handle.state::<WindowManagerState>();
             if let Ok(size) = window.outer_size() {
                 state.record_config_change(WindowConfig {
@@ -283,10 +291,14 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                         .decorations(false)
                         .transparent(true);
 
-                        if let Some(ref config) = saved {
-                            if let (Some(x), Some(y)) = (config.x, config.y) {
-                                builder = builder.position(x as f64, y as f64);
+                        let has_valid_position = saved.as_ref().and_then(|c| {
+                            match (c.x, c.y) {
+                                (Some(x), Some(y)) if x > -10000 && y > -10000 => Some((x, y)),
+                                _ => None,
                             }
+                        });
+                        if let Some((x, y)) = has_valid_position {
+                            builder = builder.position(x as f64, y as f64);
                         } else {
                             builder = builder.center();
                         }

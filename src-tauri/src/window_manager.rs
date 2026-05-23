@@ -6,6 +6,14 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::window_config::{WindowConfig, WindowConfigStore};
 
+/// 编辑器窗口最小尺寸
+const EDITOR_MIN_WIDTH: f64 = 290.0;
+const EDITOR_MIN_HEIGHT: f64 = 200.0;
+
+/// 主窗口最小尺寸
+const MAIN_MIN_WIDTH: f64 = 300.0;
+const MAIN_MIN_HEIGHT: f64 = 400.0;
+
 /// 防抖保存状态
 struct DebouncedSave {
     last_config: WindowConfig,
@@ -93,8 +101,8 @@ pub async fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), Strin
     // 读取保存的配置
     let saved_config = state.config_store.get(&label).unwrap_or(None);
 
-    let width = saved_config.as_ref().map(|c| c.width as f64).unwrap_or(290.0);
-    let height = saved_config.as_ref().map(|c| c.height as f64).unwrap_or(320.0);
+    let width = saved_config.as_ref().map(|c| c.width as f64).unwrap_or(EDITOR_MIN_WIDTH).max(EDITOR_MIN_WIDTH);
+    let height = saved_config.as_ref().map(|c| c.height as f64).unwrap_or(320.0).max(EDITOR_MIN_HEIGHT);
     let position = saved_config.as_ref().and_then(|c| {
         match (c.x, c.y) {
             (Some(x), Some(y)) => Some((x as f64, y as f64)),
@@ -114,7 +122,7 @@ pub async fn open_editor(app_handle: AppHandle, uid: String) -> Result<(), Strin
     let mut builder = WebviewWindowBuilder::new(&app_handle, &label, WebviewUrl::External(url.parse().map_err(|e: url::ParseError| e.to_string())?))
         .title("I便笺")
         .inner_size(width, height)
-        .min_inner_size(290.0, 48.0)
+        .min_inner_size(EDITOR_MIN_WIDTH, EDITOR_MIN_HEIGHT)
         .resizable(true)
         .decorations(false)
         .transparent(true)
@@ -251,8 +259,8 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                     let state = app_handle.state::<WindowManagerState>();
                     let saved = state.config_store.get("main").unwrap_or(None);
 
-                    let width = saved.as_ref().map(|c| c.width as f64).unwrap_or(400.0);
-                    let height = saved.as_ref().map(|c| c.height as f64).unwrap_or(600.0);
+                    let width = saved.as_ref().map(|c| c.width as f64).unwrap_or(400.0).max(MAIN_MIN_WIDTH);
+                    let height = saved.as_ref().map(|c| c.height as f64).unwrap_or(600.0).max(MAIN_MIN_HEIGHT);
 
                     let dev_url = app_handle.config().build.dev_url.as_ref();
                     let base_url = if dev_url.is_some() {
@@ -270,7 +278,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                         )
                         .title("I便笺")
                         .inner_size(width, height)
-                        .min_inner_size(300.0, 400.0)
+                        .min_inner_size(MAIN_MIN_WIDTH, MAIN_MIN_HEIGHT)
                         .resizable(true)
                         .decorations(false)
                         .transparent(true);

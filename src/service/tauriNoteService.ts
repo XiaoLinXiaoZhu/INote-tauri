@@ -55,7 +55,26 @@ class TauriNoteService {
   private async createTables() {
     if (!this.db) return;
 
-    // 不做迁移，直接确保表结构正确
+    // 检查表是否存在
+    const tableExists = await this.db.select<any[]>(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='notes'`
+    );
+
+    if (tableExists.length > 0) {
+      // 表存在，验证 schema 是否符合当前版本
+      const columns = await this.db.select<any[]>(`PRAGMA table_info(notes)`);
+      const columnNames = columns.map((col: any) => col.name);
+      const hasMdContent = columnNames.includes('md_content');
+      const hasHtmlSnapshot = columnNames.includes('html_snapshot');
+
+      if (!hasMdContent || !hasHtmlSnapshot) {
+        // 旧版本数据库，删除后重建
+        console.warn('Detected outdated database schema, dropping and recreating...');
+        await this.db.execute('DROP TABLE notes');
+      }
+    }
+
+    // 创建表（新建或重建后）
     await this.db.execute(`
       CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

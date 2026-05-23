@@ -212,19 +212,6 @@ body {
   color: #fff;
 }
 
-/* 抵消 vendor/app.css 对全局 button 的样式污染 */
-button {
-  display: inline-block;
-  border-radius: 0;
-  background-color: transparent;
-  box-shadow: none;
-  padding: 0;
-  height: auto;
-  font-size: inherit;
-  font-weight: inherit;
-  border: none;
-}
-
 @media (prefers-color-scheme: dark) {
   body,
   .header,

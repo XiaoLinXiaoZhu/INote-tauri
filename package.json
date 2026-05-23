@@ -37,7 +37,7 @@
     "@tauri-apps/plugin-store": "^2.3.0",
     "@tauri-apps/plugin-updater": "^2.9.0",
     "@types/path-browserify": "^1.0.3",
-    "@xlxz/markdown-editor": "^2.2.1",
+    "@xlxz/markdown-editor": "^2.2.2",
     "conventional-changelog-cli": "^4.1.0",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.13",

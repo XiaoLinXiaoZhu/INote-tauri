@@ -448,6 +448,8 @@
               v = e[m];
             "function" == typeof v && r.addEventListener(m.substring(2), v);
           }
+        // Auto-tag form elements to scope vendor CSS
+        if ({button:1,input:1,select:1,textarea:1}[t]) r.classList.add("ob-styled");
         return r;
       }),
       (window.createDiv = function (t, e) {

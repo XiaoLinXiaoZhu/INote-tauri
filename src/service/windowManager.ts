@@ -9,12 +9,14 @@ import { invoke } from '@tauri-apps/api/core';
 
 export const windowManager = {
   /** 打开编辑器窗口（如已存在则激活） */
-  openEditor: (uid: string): Promise<void> =>
-    invoke('open_editor', { uid }),
+  openEditor: (uid: string): Promise<void> => invoke('open_editor', { uid }),
 
   /** 打开图片预览窗口 */
-  openImagePreview: (src: string, width: number, height: number): Promise<void> =>
-    invoke('open_image_preview', { src, width, height }),
+  openImagePreview: (
+    src: string,
+    width: number,
+    height: number,
+  ): Promise<void> => invoke('open_image_preview', { src, width, height }),
 
   /** 关闭指定窗口 */
   closeWindow: (label: string): Promise<void> =>

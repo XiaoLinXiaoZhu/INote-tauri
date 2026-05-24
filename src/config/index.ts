@@ -13,8 +13,8 @@ const constImagesPath = '/resources/images/';
 
 export {
   classNames,
-  isDevelopment,
   constErrorLogPath,
+  constImagesPath,
   constStoragePath,
-  constImagesPath
+  isDevelopment,
 };

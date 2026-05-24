@@ -1,11 +1,13 @@
-import { writeTextFile } from '@tauri-apps/plugin-fs';
-import { join, appDataDir } from '@tauri-apps/api/path';
-import { ComponentPublicInstance } from 'vue';
 import { getVersion } from '@tauri-apps/api/app';
+import { appDataDir, join } from '@tauri-apps/api/path';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
+import type { ComponentPublicInstance } from 'vue';
 import { constErrorLogPath } from '@/config';
 
 // 格式化错误堆栈
-export function formatComponentName(vm: ComponentPublicInstance | null): string {
+export function formatComponentName(
+  vm: ComponentPublicInstance | null,
+): string {
   if (vm === null) return '';
   if (vm.$root === vm) return 'root';
 
@@ -15,11 +17,11 @@ export function formatComponentName(vm: ComponentPublicInstance | null): string 
 }
 
 export function formatStack(stack: string): string {
-  const regex = /at .* \(.*\/([^\/]+\/[^\/]+)\)/g;
+  const regex = /at .* \(.*\/([^/]+\/[^/]+)\)/g;
   const newStack = stack.split('\n').map(v => {
     return v.replace(regex, 'at $1');
   });
-  
+
   // 转换string
   return newStack.join('\n    ');
 }
@@ -37,10 +39,14 @@ export const getErrorLogPath = async () => {
   }
 };
 
-export default async function(error: unknown, vm: ComponentPublicInstance | null, info: string): Promise<void> {
+export default async function (
+  error: unknown,
+  vm: ComponentPublicInstance | null,
+  info: string,
+): Promise<void> {
   try {
     const { message, stack } = error as Error;
-    
+
     // 替换 process.versions 为 Tauri 的版本信息
     const appVersion = await getVersion();
     const { outerWidth, outerHeight, innerWidth, innerHeight } = window;
@@ -58,16 +64,16 @@ export default async function(error: unknown, vm: ComponentPublicInstance | null
         winSize: {
           outer: [outerWidth, outerHeight],
           inner: [innerWidth, innerHeight],
-          screen: [width, height]
+          screen: [width, height],
         },
-        location: window.location.href
+        location: window.location.href,
       },
-      date: new Date().toLocaleString()
+      date: new Date().toLocaleString(),
     };
 
     const errorMessage = JSON.stringify(errorInfo, null, 4);
     console.error(errorMessage);
-    
+
     try {
       // 仅在生产环境下写入日志文件
       const isDevelopment = import.meta.env.MODE !== 'production';

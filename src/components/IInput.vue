@@ -37,18 +37,18 @@ const props = defineProps({
   max: Number,
   control: {
     type: Boolean,
-    default: false
+    default: false,
   },
   readonly: {
     type: Boolean,
-    default: false
+    default: false,
   },
   disabled: Boolean,
   type: {
     type: String,
-    default: 'text'
+    default: 'text',
   },
-  maxlength: String
+  maxlength: String,
 });
 
 const emits = defineEmits(['update:modelValue', 'on-change', 'on-input']);
@@ -63,7 +63,7 @@ if (props.type === 'number') {
 
 const calculateDelay = (type: 'add' | 'sub') => {
   const numberInput = Number(inputValue.value);
-  if (isNaN(numberInput)) return;
+  if (Number.isNaN(numberInput)) return;
   let afterNumber = 0;
   switch (type) {
     case 'add':

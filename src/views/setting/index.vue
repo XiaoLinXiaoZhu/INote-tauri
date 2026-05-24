@@ -107,26 +107,26 @@
 </template>
 
 <script setup lang="ts">
+import { getVersion } from '@tauri-apps/api/app';
+import { exists } from '@tauri-apps/plugin-fs';
+import { open as openShell } from '@tauri-apps/plugin-shell';
+import { ref } from 'vue';
+import ICopy from '@/components/ICopy.vue';
+import IInput from '@/components/IInput.vue';
+import useMessage from '@/components/IMessage';
 import ISwitch from '@/components/ISwitch.vue';
 import { notesState, resetStore } from '@/store/notes.state';
 import { getErrorLogPath } from '@/utils/errorLog';
-import useMessage from '@/components/IMessage';
-import Card from './components/Card.vue';
-import BlockItem from './components/BlockItem.vue';
-import ICopy from '@/components/ICopy.vue';
-import IInput from '@/components/IInput.vue';
-import { ref } from 'vue';
-import IMessageBox from '../../components/IMessageBox.vue';
 import packageJson from '../../../package.json';
-import { exists } from '@tauri-apps/plugin-fs';
-import { open as openShell } from '@tauri-apps/plugin-shell';
-import { getVersion } from '@tauri-apps/api/app';
+import IMessageBox from '../../components/IMessageBox.vue';
+import BlockItem from './components/BlockItem.vue';
+import Card from './components/Card.vue';
 
 // 应用信息
 const appInfo = {
   node: 'Tauri/Rust',
   chrome: 'WebView',
-  tauri: 'v2.0'
+  tauri: 'v2.0',
 };
 const currentYear = new Date().getFullYear();
 const version = ref('');
@@ -135,11 +135,13 @@ const githubLink = 'https://github.com/XiaoLinXiaoZhu/INote-tauri';
 const clearBtnState = ref(false);
 
 // 获取应用版本
-getVersion().then(v => {
-  version.value = v;
-}).catch(() => {
-  version.value = packageJson.version;
-});
+getVersion()
+  .then(v => {
+    version.value = v;
+  })
+  .catch(() => {
+    version.value = packageJson.version;
+  });
 
 const openLogFolder = async () => {
   try {

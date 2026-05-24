@@ -20,11 +20,16 @@
 const props = defineProps({
   modelValue: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
-const emits = defineEmits(['update:modelValue', 'on-confirm', 'on-cancel', 'on-close']);
+const emits = defineEmits([
+  'update:modelValue',
+  'on-confirm',
+  'on-cancel',
+  'on-close',
+]);
 
 const onConfirm = () => {
   emits('on-confirm');

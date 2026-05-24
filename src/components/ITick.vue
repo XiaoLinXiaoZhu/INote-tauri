@@ -10,16 +10,16 @@ import { onBeforeUpdate } from 'vue';
 const props = defineProps({
   modelValue: {
     type: Boolean,
-    default: false
+    default: false,
   },
   duration: {
     type: Number,
-    default: 2000
+    default: 2000,
   },
   hide: {
     type: Boolean,
-    default: true
-  }
+    default: true,
+  },
 });
 
 const emits = defineEmits(['update:modelValue']);

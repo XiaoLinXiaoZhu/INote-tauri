@@ -8,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import IHeader from '@/components/IHeader.vue';
 import { useRoute } from 'vue-router';
+import IHeader from '@/components/IHeader.vue';
 
 const route = useRoute();
 const imageSrc = route.query.src as string;

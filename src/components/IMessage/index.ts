@@ -1,4 +1,4 @@
-import { createApp, h, App } from 'vue';
+import { type App, createApp, h } from 'vue';
 import './index.css';
 
 type MessageType = 'success' | 'info' | 'error' | 'warning';
@@ -11,31 +11,39 @@ const render = (text: string, type: MessageType) => {
   return h(
     'div',
     {
-      class: ['hy-message-content', 'flex-items', type ? `hy-message-${type}` : '']
+      class: [
+        'hy-message-content',
+        'flex-items',
+        type ? `hy-message-${type}` : '',
+      ],
     },
     [
       h('i', {
-        class: ['iconfont', 'icon-warning']
+        class: ['iconfont', 'icon-warning'],
       }),
       h(
         'span',
         {
-          class: 'hy-message-text'
+          class: 'hy-message-text',
         },
-        text
-      )
-    ]
+        text,
+      ),
+    ],
   );
 };
 
-const useMessage = (text: string, type: MessageType = 'info', duration = 2800): void => {
+const useMessage = (
+  text: string,
+  type: MessageType = 'info',
+  duration = 2800,
+): void => {
   messageApp = null;
   messageApp = createApp({
     setup() {
       return () => {
         return render(text, type);
       };
-    }
+    },
   });
   if (timeouter) {
     clearTimeout(timeouter as number);

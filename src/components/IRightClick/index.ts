@@ -1,4 +1,11 @@
-import { createApp, h, App, VNode, RendererElement, RendererNode } from 'vue';
+import {
+  type App,
+  createApp,
+  h,
+  type RendererElement,
+  type RendererNode,
+  type VNode,
+} from 'vue';
 import './index.css';
 
 type ClassName = string | string[] | (() => string | string[]);
@@ -27,9 +34,7 @@ export interface MenuOptions {
 type RenderVNode = VNode<
   RendererNode,
   RendererElement,
-  {
-    [key: string]: any;
-  }
+  Record<string, unknown>
 >;
 
 class CreateRightClick {
@@ -65,7 +70,8 @@ class CreateRightClick {
         let classNameStr = '';
         if (isDisabled) classNameStr = 'disabled-item';
 
-        if (typeof item.className === 'function') classNameStr += ` ${item.className()}`;
+        if (typeof item.className === 'function')
+          classNameStr += ` ${item.className()}`;
 
         if (item.className) classNameStr += ` ${item.className}`;
 
@@ -86,31 +92,31 @@ class CreateRightClick {
             if (item.handler) {
               return item.handler(e);
             }
-          }
+          },
         },
         [
           // icon
           h('i', {
-            class: item.iconName
+            class: item.iconName,
           }),
           // text
           h(
             'span',
             {
-              class: 'right-click-menu-text'
+              class: 'right-click-menu-text',
             },
-            item.text
-          )
-        ]
+            item.text,
+          ),
+        ],
       );
     };
 
     return h(
       'ul',
       {
-        class: ['right-click-menu-list']
+        class: ['right-click-menu-list'],
       },
-      [...menu.map(renderLiEl)]
+      [...menu.map(renderLiEl)],
     );
   }
 
@@ -172,6 +178,7 @@ class CreateRightClick {
         if (typeof item.render === 'function' && item.render() === true) {
           return item;
         }
+        return false;
       } else {
         return item;
       }
@@ -181,7 +188,7 @@ class CreateRightClick {
       this.rightClickEl = createApp({
         setup() {
           return () => createRender;
-        }
+        },
       });
     }
     if (!this.rightClickElBox) {

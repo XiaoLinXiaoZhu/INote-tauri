@@ -1,12 +1,16 @@
-import { enc, AES, mode, pad } from 'crypto-js';
+import { AES, enc, mode, pad } from 'crypto-js';
 
-type FunctionalControl = (this: any, fn: any, delay?: number) => (...args: any) => void;
+type FunctionalControl = (
+  this: unknown,
+  fn: (...args: any[]) => void,
+  delay?: number,
+) => (...args: any[]) => void;
 type DebounceEvent = FunctionalControl;
 type ThrottleEvent = FunctionalControl;
 
-export const debounce: DebounceEvent = function(fn, delay = 1000) {
+export const debounce: DebounceEvent = function (fn, delay = 1000) {
   let timer: number | null = null;
-  return (...args: any) => {
+  return (...args: any[]) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       fn.apply(this, args);
@@ -14,9 +18,9 @@ export const debounce: DebounceEvent = function(fn, delay = 1000) {
   };
 };
 
-export const throttle: ThrottleEvent = function(fn, delay = 500) {
+export const throttle: ThrottleEvent = function (fn, delay = 500) {
   let flag = true;
-  return (...args: any) => {
+  return (...args: any[]) => {
     if (!flag) return;
     flag = false;
     setTimeout(() => {
@@ -30,7 +34,20 @@ export const uuid = (): string => {
   const S4 = () => {
     return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
   };
-  return S4() + S4() + '-' + S4() + '-' + S4() + '-' + S4() + '-' + S4() + S4() + S4();
+  return (
+    S4() +
+    S4() +
+    '-' +
+    S4() +
+    '-' +
+    S4() +
+    '-' +
+    S4() +
+    '-' +
+    S4() +
+    S4() +
+    S4()
+  );
 };
 
 export const symbolKey = 'crypto_key';
@@ -45,7 +62,7 @@ export const algorithm = {
     const encrypted = AES.encrypt(srcs, algorithm[symbolKey], {
       iv: algorithm[symbolIv],
       mode: mode.CBC,
-      padding: pad.Pkcs7
+      padding: pad.Pkcs7,
     });
     return encrypted.ciphertext.toString().toUpperCase();
   },
@@ -55,11 +72,11 @@ export const algorithm = {
     const decrypt = AES.decrypt(srcs, algorithm[symbolKey], {
       iv: algorithm[symbolIv],
       mode: mode.CBC,
-      padding: pad.Pkcs7
+      padding: pad.Pkcs7,
     });
     const decryptedStr = decrypt.toString(enc.Utf8);
     return decryptedStr.toString();
-  }
+  },
 };
 
 export interface TwiceHandle {
@@ -105,5 +122,5 @@ export const twiceHandle: TwiceHandle = {
     if (this.keydownCount <= 2) {
       this.keydownCount += 1;
     }
-  }
+  },
 };

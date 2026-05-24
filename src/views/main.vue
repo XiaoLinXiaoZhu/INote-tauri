@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUpdate } from 'vue';
+import { onBeforeUpdate, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import IHeader from '@/components/IHeader.vue';
 

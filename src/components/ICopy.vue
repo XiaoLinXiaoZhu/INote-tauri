@@ -1,6 +1,6 @@
 <template>
   <div class="flex-items">
-    <a class="link-style" href="javascript:void(0)" @click="copyText">
+    <a class="link-style" href="javascript:void(0)" @click="handleCopy">
       <slot></slot>
     </a>
     <ITick v-model="copyStatus" :duration="1000" />
@@ -14,12 +14,12 @@ import ITick from './ITick.vue';
 const props = defineProps({
   copyText: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 });
 const copyStatus = ref(false);
 
-const copyText = () => {
+const handleCopy = () => {
   if (copyStatus.value) return;
   copyStatus.value = true;
   navigator.clipboard.writeText(props.copyText);

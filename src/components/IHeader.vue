@@ -51,12 +51,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
-import { windowManager } from '@/service/windowManager';
-import { uuid } from '@/utils';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { platform as getPlatform } from '@tauri-apps/plugin-os';
+import { onMounted, ref } from 'vue';
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
+import { windowManager } from '@/service/windowManager';
+import { uuid } from '@/utils';
 
 const emits = defineEmits(['optionClick', 'onClose']);
 const platformWindows = ref(false);
@@ -73,8 +73,12 @@ const dragWindow = () => {
 // 检测操作系统类型
 onMounted(async () => {
   try {
+    // Define interface for window with Tauri extension
+    interface TauriWindow extends Window {
+      __TAURI__?: Record<string, unknown>;
+    }
     // 仅在 Tauri 环境下调用 plugin-os
-    if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+    if (typeof window !== 'undefined' && (window as TauriWindow).__TAURI__) {
       if (typeof getPlatform === 'function') {
         const osType = await getPlatform();
         platformWindows.value = osType === 'windows';
@@ -113,16 +117,16 @@ const drawingPin = async () => {
 defineProps({
   showPin: {
     type: Boolean,
-    default: false
+    default: false,
   },
   showSettingBack: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
 // 获取当前路由名
-const currentRouteName = ref<any>(useRoute().name);
+const currentRouteName = ref<string | symbol | undefined>(useRoute().name);
 const router = useRouter();
 
 // 点击选项按钮

@@ -56,20 +56,26 @@ class TauriNoteService {
     if (!this.db) return;
 
     // 检查表是否存在
-    const tableExists = await this.db.select<any[]>(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name='notes'`
+    const tableExists = await this.db.select<Record<string, unknown>[]>(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='notes'`,
     );
 
     if (tableExists.length > 0) {
       // 表存在，验证 schema 是否符合当前版本
-      const columns = await this.db.select<any[]>(`PRAGMA table_info(notes)`);
-      const columnNames = columns.map((col: any) => col.name);
+      const columns = await this.db.select<Record<string, unknown>[]>(
+        `PRAGMA table_info(notes)`,
+      );
+      const columnNames = columns.map(
+        (col: Record<string, unknown>) => col.name,
+      );
       const hasMdContent = columnNames.includes('md_content');
       const hasHtmlSnapshot = columnNames.includes('html_snapshot');
 
       if (!hasMdContent || !hasHtmlSnapshot) {
         // 旧版本数据库，删除后重建
-        console.warn('Detected outdated database schema, dropping and recreating...');
+        console.warn(
+          'Detected outdated database schema, dropping and recreating...',
+        );
         await this.db.execute('DROP TABLE notes');
       }
     }
@@ -92,34 +98,55 @@ class TauriNoteService {
 
   async getAllNotes(): Promise<NoteModel[]> {
     await this.ensureInitialized();
-    return await this.db!.select<NoteModel[]>(
-      'SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC'
-    );
+    return (await this.db!.select<NoteModel[]>(
+      'SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC',
+    ))!;
   }
 
   async getNoteByUid(uid: string): Promise<NoteModel | null> {
     await this.ensureInitialized();
-    const result = await this.db!.select<NoteModel[]>(
+    const result = (await this.db!.select<NoteModel[]>(
       'SELECT * FROM notes WHERE uid = ?',
-      [uid]
-    );
+      [uid],
+    ))!;
     return result.length > 0 ? result[0] : null;
   }
 
-  async createNote(note: { uid: string; title: string; md_content: string; html_snapshot: string; color: string }): Promise<number> {
+  async createNote(note: {
+    uid: string;
+    title: string;
+    md_content: string;
+    html_snapshot: string;
+    color: string;
+  }): Promise<number> {
     await this.ensureInitialized();
-    const result = await this.db!.execute(
+    const result = (await this.db!.execute(
       'INSERT INTO notes (uid, title, md_content, html_snapshot, color, is_pinned) VALUES (?, ?, ?, ?, ?, ?)',
-      [note.uid, note.title, note.md_content, note.html_snapshot, note.color || '', false]
-    );
+      [
+        note.uid,
+        note.title,
+        note.md_content,
+        note.html_snapshot,
+        note.color || '',
+        false,
+      ],
+    ))!;
     return result.lastInsertId || 0;
   }
 
-  async updateNoteByUid(uid: string, note: Partial<Pick<NoteModel, 'title' | 'md_content' | 'html_snapshot' | 'color' | 'is_pinned'>>): Promise<void> {
+  async updateNoteByUid(
+    uid: string,
+    note: Partial<
+      Pick<
+        NoteModel,
+        'title' | 'md_content' | 'html_snapshot' | 'color' | 'is_pinned'
+      >
+    >,
+  ): Promise<void> {
     await this.ensureInitialized();
 
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     if (note.title !== undefined) {
       fields.push('title = ?');
@@ -147,15 +174,15 @@ class TauriNoteService {
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(uid);
 
-    await this.db!.execute(
+    await this.db?.execute(
       `UPDATE notes SET ${fields.join(', ')} WHERE uid = ?`,
-      values
+      values,
     );
   }
 
   async deleteNoteByUid(uid: string): Promise<void> {
     await this.ensureInitialized();
-    await this.db!.execute('DELETE FROM notes WHERE uid = ?', [uid]);
+    await this.db?.execute('DELETE FROM notes WHERE uid = ?', [uid]);
 
     try {
       const { windowManager } = await import('./windowManager');
@@ -167,10 +194,10 @@ class TauriNoteService {
 
   async searchNotes(keyword: string): Promise<NoteModel[]> {
     await this.ensureInitialized();
-    return await this.db!.select<NoteModel[]>(
+    return (await this.db!.select<NoteModel[]>(
       'SELECT * FROM notes WHERE title LIKE ? OR md_content LIKE ? ORDER BY is_pinned DESC, updated_at DESC',
-      [`%${keyword}%`, `%${keyword}%`]
-    );
+      [`%${keyword}%`, `%${keyword}%`],
+    ))!;
   }
 }
 

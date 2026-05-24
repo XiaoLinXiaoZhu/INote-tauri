@@ -14,19 +14,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, onMounted } from 'vue';
-import Search from './components/Search.vue';
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
+import ILoading from '@/components/ILoading.vue';
 
 import { windowManager } from '@/service/windowManager';
-import { NoteListItem } from '@/types/notes';
+import type { NoteListItem } from '@/types/notes';
 import Empty from './components/Empty.vue';
-import ILoading from '@/components/ILoading.vue';
+import Search from './components/Search.vue';
 
 console.log('🚀 Index page loaded');
 
 const List = defineAsyncComponent({
   loader: () => import('./components/List.vue'),
-  loadingComponent: ILoading
+  loadingComponent: ILoading,
 });
 
 const viewNotesList = ref<NoteListItem[]>([]);
@@ -75,7 +75,8 @@ const changeBlockState = (state: number) => {
 
 const stateClass = computed(() => {
   if (blockState.value === 1) return 'block-list-show';
-  if (blockState.value === 2 || blockState.value === 3) return 'block-empty-show';
+  if (blockState.value === 2 || blockState.value === 3)
+    return 'block-empty-show';
   return 'block-show';
 });
 </script>

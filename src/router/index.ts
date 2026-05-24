@@ -1,5 +1,8 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
-import { RouteRecordRaw } from 'vue-router';
+import {
+  createRouter,
+  createWebHashHistory,
+  type RouteRecordRaw,
+} from 'vue-router';
 import main from '../views/main.vue';
 
 const routes: Array<RouteRecordRaw> = [
@@ -13,40 +16,40 @@ const routes: Array<RouteRecordRaw> = [
         name: 'index',
         component: () => import('../views/index/index.vue'),
         meta: {
-          title: 'I便笺'
-        }
+          title: 'I便笺',
+        },
       },
       {
         path: '/editor',
         name: 'editor',
         component: () => import('../views/editor/index.vue'),
         meta: {
-          title: ''
-        }
+          title: '',
+        },
       },
       {
         path: '/setting',
         name: 'setting',
         component: () => import('../views/setting/index.vue'),
         meta: {
-          title: '设置'
-        }
-      }
-    ]
+          title: '设置',
+        },
+      },
+    ],
   },
   {
     path: '/image-preview',
     name: 'imagePreview',
     component: () => import('../views/ImagePreview/index.vue'),
     meta: {
-      title: '图片预览'
-    }
-  }
+      title: '图片预览',
+    },
+  },
 ];
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
 });
 
 // 添加路由守卫用于调试
@@ -55,11 +58,11 @@ router.beforeEach((to, from, next) => {
   next();
 });
 
-router.afterEach((to) => {
+router.afterEach(to => {
   console.log('✅ Navigation completed to:', to.path);
 });
 
-router.onError((error) => {
+router.onError(error => {
   console.error('❌ Router error:', error);
 });
 

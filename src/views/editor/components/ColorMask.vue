@@ -16,15 +16,15 @@
 </template>
 
 <script setup lang="ts">
-import { classNames } from '@/config';
 import { onMounted, onUnmounted } from 'vue';
+import { classNames } from '@/config';
 
 const emits = defineEmits(['onChange', 'onOpen', 'onClose']);
 const props = defineProps({
   showState: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
 /** 打开主页列表 */
@@ -32,12 +32,12 @@ const openNotesList = async () => {
   try {
     const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
     const mainWindow = await WebviewWindow.getByLabel('main');
-    
+
     if (mainWindow) {
       await mainWindow.show();
       await mainWindow.setFocus();
     }
-    
+
     emits('onOpen', false);
   } catch (error) {
     console.error('打开主页列表失败:', error);

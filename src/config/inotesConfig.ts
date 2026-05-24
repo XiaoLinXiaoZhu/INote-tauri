@@ -10,34 +10,34 @@
 export const classNames = [
   {
     className: 'white-content',
-    title: '白色'
+    title: '白色',
   },
   {
     className: 'yellow-content',
-    title: '黄色'
+    title: '黄色',
   },
   {
     className: 'green-content',
-    title: '绿色'
+    title: '绿色',
   },
   {
     className: 'pink-content',
-    title: '粉色'
+    title: '粉色',
   },
   {
     className: 'purple-content',
-    title: '紫色'
+    title: '紫色',
   },
   {
     className: 'blue-content',
-    title: '蓝色'
+    title: '蓝色',
   },
   {
     className: 'gray-content',
-    title: '灰色'
+    title: '灰色',
   },
   {
     className: 'black-content',
-    title: '黑色'
-  }
+    title: '黑色',
+  },
 ];

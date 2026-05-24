@@ -1,13 +1,14 @@
+import { appDataDir, join } from '@tauri-apps/api/path';
 import { ref, watch } from 'vue';
-import { join, appDataDir } from '@tauri-apps/api/path';
 import { constImagesPath } from '@/config';
+
 interface NotesState {
-  [key: string]: any;
+  [key: string]: unknown;
   syncDelay: number;
   serverAddress: string;
   serverToken: string;
   switchStatus: {
-    [key: string]: any;
+    [key: string]: unknown;
     /**
      * 开启提示
      */
@@ -73,9 +74,9 @@ const defaultNotesState: NotesState = {
     /**
      * 打开同步
      */
-    openSync: false
+    openSync: false,
   },
-  imagesCacheUrl: '' // 将在初始化时异步设置
+  imagesCacheUrl: '', // 将在初始化时异步设置
 };
 
 export const notesState = ref<NotesState>({} as NotesState);
@@ -100,7 +101,7 @@ const getLocalValue = async () => {
     } else {
       notesState.value = { ...defaultNotesState };
     }
-    
+
     // 异步设置图片缓存路径
     if (!notesState.value.imagesCacheUrl) {
       notesState.value.imagesCacheUrl = await initImagesCacheUrl();
@@ -132,7 +133,11 @@ export const resetStore = async () => {
 // 不需要监听 localStorage 变化，因为在 Tauri 中状态管理是本地的
 
 // 监听状态变化并保存到 localStorage
-watch(() => notesState.value, e => {
-  localStorage.setItem('notesState', JSON.stringify(e));
-  // 在 Tauri 中，我们不需要 IPC 通信
-}, { deep: true });
+watch(
+  () => notesState.value,
+  e => {
+    localStorage.setItem('notesState', JSON.stringify(e));
+    // 在 Tauri 中，我们不需要 IPC 通信
+  },
+  { deep: true },
+);

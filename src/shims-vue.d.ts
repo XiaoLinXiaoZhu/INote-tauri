@@ -1,7 +1,8 @@
 declare module '*.vue' {
   import { DefineComponent } from 'vue';
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  const component: DefineComponent<{}, {}, any>;
+
+  // biome-ignore lint/complexity/noBannedTypes: Vue 的 DefineComponent 类型签名要求使用 `{}`
+  const component: DefineComponent<{}, {}, object>;
   export default component;
 }
 
@@ -10,6 +11,6 @@ declare const isDark: () => boolean;
 
 declare global {
   interface Window {
-    __TAURI__?: any;
+    __TAURI__?: Record<string, unknown>;
   }
 }

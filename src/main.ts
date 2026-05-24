@@ -1,8 +1,8 @@
 import { createApp } from 'vue';
+import { noteService } from '@/service/tauriNoteService';
+import outputErrorLog from '@/utils/errorLog';
 import App from './App.vue';
 import router from './router';
-import outputErrorLog from '@/utils/errorLog';
-import { noteService } from '@/service/tauriNoteService';
 
 const initializeServices = async () => {
   await noteService.initialize();
@@ -41,10 +41,10 @@ if (import.meta.env.MODE !== 'development') {
 
 app.use(router).mount('#app');
 
-window.addEventListener('error', (event) => {
+window.addEventListener('error', event => {
   console.error('Global error:', event.error);
 });
 
-window.addEventListener('unhandledrejection', (event) => {
+window.addEventListener('unhandledrejection', event => {
   console.error('Unhandled rejection:', event.reason);
 });

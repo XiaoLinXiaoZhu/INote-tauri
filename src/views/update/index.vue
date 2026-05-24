@@ -5,14 +5,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
 import { listen } from '@tauri-apps/api/event';
+import { onMounted, ref } from 'vue';
 
 const percentage = ref(0);
 
 onMounted(async () => {
   // 监听 Tauri 的更新进度事件
-  await listen('update-download-progress', (event) => {
+  await listen('update-download-progress', event => {
     const progress = event.payload as { percent: number };
     percentage.value = Math.round(progress.percent);
   });

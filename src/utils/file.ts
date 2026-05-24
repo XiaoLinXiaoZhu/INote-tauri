@@ -42,7 +42,10 @@ export const fileToBuffer = async (file: File | Blob): Promise<ArrayBuffer> => {
  * @param outputFormat
  * @returns
  */
-export const convertImgToBase64 = async (src: string, outputFormat: string): Promise<string> => {
+export const convertImgToBase64 = async (
+  src: string,
+  outputFormat: string,
+): Promise<string> => {
   let canvas: HTMLCanvasElement | null = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   let img: HTMLImageElement | null = document.createElement('img');
@@ -52,7 +55,7 @@ export const convertImgToBase64 = async (src: string, outputFormat: string): Pro
     img!.onload = () => {
       canvas!.height = img!.height;
       canvas!.width = img!.width;
-      ctx!.drawImage(img!, 0, 0);
+      ctx?.drawImage(img!, 0, 0);
       const dataURL = canvas!.toDataURL(outputFormat || 'image/png');
       resolve(dataURL);
       canvas = null;
@@ -67,7 +70,10 @@ export const convertImgToBase64 = async (src: string, outputFormat: string): Pro
  * @param type
  * @returns
  */
-export const convertBase64UrlToBlob = (dataURL: string, type: string): Promise<Blob> => {
+export const convertBase64UrlToBlob = (
+  dataURL: string,
+  type: string,
+): Promise<Blob> => {
   return new Promise(resolve => {
     let bytes = null;
     if (dataURL.split(',').length > 1) {
@@ -130,12 +136,8 @@ export const copyImage = async (dom: HTMLImageElement) => {
   const blob = await convertBase64UrlToBlob(base64Url, 'image/png');
   // 向剪切板写入流数据
   navigator.clipboard.write([
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
     new ClipboardItem({
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      [blob.type]: blob
-    })
+      [blob.type]: blob,
+    }),
   ]);
 };

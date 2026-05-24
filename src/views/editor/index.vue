@@ -21,22 +21,20 @@
 </template>
 
 <script setup lang="ts">
+import { emit, listen } from '@tauri-apps/api/event';
 import { computed, defineAsyncComponent, onBeforeMount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import IDropBar from '@/components/IDropBar.vue';
 import ILoading from '@/components/ILoading.vue';
-
-import { listen, emit } from '@tauri-apps/api/event';
 import { noteService } from '@/service/tauriNoteService';
 import { windowManager } from '@/service/windowManager';
 import { notesState } from '@/store/notes.state';
-
-import IDropBar from '@/components/IDropBar.vue';
 import ColorMask from './components/ColorMask.vue';
 
 const IHeader = defineAsyncComponent(() => import('@/components/IHeader.vue'));
 const IEditor = defineAsyncComponent({
   loader: () => import('./components/IEditor.vue'),
-  loadingComponent: ILoading
+  loadingComponent: ILoading,
 });
 
 const showOptionsStatus = ref(false);
@@ -44,6 +42,10 @@ const uid = ref('');
 const currentBgClassName = ref('');
 const route = useRoute();
 let currentWindowLabel = '';
+
+interface EditorInstance {
+  getHtmlSnapshot(): string;
+}
 
 const editorContent = ref('');
 const editorRef = ref<InstanceType<typeof IEditor> | null>(null);
@@ -69,7 +71,9 @@ const SAVE_DEBOUNCE_MS = 500;
 onBeforeMount(async () => {
   await noteService.initialize();
 
-  const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+  const { getCurrentWebviewWindow } = await import(
+    '@tauri-apps/api/webviewWindow'
+  );
   currentWindowLabel = getCurrentWebviewWindow().label;
 
   await initEditorContent();
@@ -141,7 +145,8 @@ const debouncedSaveContent = () => {
 
 /** 从 CM6 DOM 提取快照并保存 */
 const saveContent = async () => {
-  const htmlSnapshot = (editorRef.value as any)?.getHtmlSnapshot?.() || '';
+  const htmlSnapshot =
+    (editorRef.value as unknown as EditorInstance)?.getHtmlSnapshot?.() || '';
 
   try {
     await noteService.updateNoteByUid(uid.value, {
@@ -215,7 +220,9 @@ const afterIpc = async () => {
   });
 
   await listen(`${uid.value}_toOpen`, async () => {
-    const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+    const { getCurrentWebviewWindow } = await import(
+      '@tauri-apps/api/webviewWindow'
+    );
     getCurrentWebviewWindow().show();
     emit(`get_${uid.value}_toOpen`);
   });
@@ -261,10 +268,12 @@ const immersionHandle = async () => {
     await listen('tauri://blur', currentBlurHandle);
     await listen('tauri://focus', currentWindowFocusHandle);
 
-    document.addEventListener('keydown', async (e) => {
+    document.addEventListener('keydown', async e => {
       if (e.keyCode === 27) {
         lockState.value = false;
-        const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+        const { getCurrentWebviewWindow } = await import(
+          '@tauri-apps/api/webviewWindow'
+        );
         getCurrentWebviewWindow().minimize();
       }
     });

@@ -8,29 +8,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
-import { createEditor } from '@xlxz/markdown-editor';
-import type { EditorInstance, EditorBackend } from '@xlxz/markdown-editor';
-import CreateRightClick, { MenuOptions } from '@/components/IRightClick';
-import { constImagesPath } from '@/config';
-import { uuid } from '@/utils';
-import { windowManager } from '@/service/windowManager';
-import { copyImage } from '@/utils/file';
-import { open as openShell } from '@tauri-apps/plugin-shell';
-import { join } from '@tauri-apps/api/path';
+import { appDataDir, join } from '@tauri-apps/api/path';
 import { exists, mkdir, writeFile } from '@tauri-apps/plugin-fs';
-import { appDataDir } from '@tauri-apps/api/path';
+import { open as openShell } from '@tauri-apps/plugin-shell';
+import type { EditorBackend, EditorInstance } from '@xlxz/markdown-editor';
+import { createEditor } from '@xlxz/markdown-editor';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import CreateRightClick, { type MenuOptions } from '@/components/IRightClick';
+import { constImagesPath } from '@/config';
+import { windowManager } from '@/service/windowManager';
+import { uuid } from '@/utils';
+import { copyImage } from '@/utils/file';
 
 const props = defineProps({
   uid: {
     type: String,
-    default: ''
+    default: '',
   },
   modelValue: {
     type: String,
-    default: ''
+    default: '',
   },
-  className: String
+  className: String,
 });
 
 const emits = defineEmits(['on-input', 'update:modelValue']);
@@ -45,7 +44,10 @@ onMounted(async () => {
   // 初始化图片路径
   try {
     const appDataPath = await appDataDir();
-    currentItemImagePath.value = await join(appDataPath, constImagesPath.replace('/', ''));
+    currentItemImagePath.value = await join(
+      appDataPath,
+      constImagesPath.replace('/', ''),
+    );
   } catch (error) {
     console.error('初始化图片路径失败:', error);
     currentItemImagePath.value = './images';
@@ -61,7 +63,8 @@ onBeforeUnmount(() => {
   }
 });
 
-const urlRegExp = /^(((ht|f)tps?):\/\/)?([^!@#$%^&*?.\s-]([^!@#$%^&*?.\s]{0,63}[^!@#$%^&*?.\s])?\.)+[a-z]{2,6}\/?/;
+const urlRegExp =
+  /^(((ht|f)tps?):\/\/)?([^!@#$%^&*?.\s-]([^!@#$%^&*?.\s]{0,63}[^!@#$%^&*?.\s])?\.)+[a-z]{2,6}\/?/;
 
 const loadEditor = () => {
   if (!editorContainer.value) return;
@@ -71,32 +74,40 @@ const loadEditor = () => {
       const uuidStr = uuid();
       const extName = name.split('.').pop() || 'png';
       await createImageDir();
-      const imagePath = await join(currentItemImagePath.value, props.uid, `${uuidStr}.${extName}`);
+      const imagePath = await join(
+        currentItemImagePath.value,
+        props.uid,
+        `${uuidStr}.${extName}`,
+      );
       await writeFile(imagePath, new Uint8Array(data));
       return `atom:///${imagePath}`;
-    }
+    },
   };
 
-  editor = createEditor(editorContainer.value, {
-    doc: props.modelValue,
-    filePath: `${props.uid}.md`,
-    theme: 'light',
-    readableLineWidth: false,
-    onChange(doc: string) {
-      isInternalChange = true;
-      emits('update:modelValue', doc);
-      emits('on-input', doc);
-      isInternalChange = false;
+  editor = createEditor(
+    editorContainer.value,
+    {
+      doc: props.modelValue,
+      filePath: `${props.uid}.md`,
+      theme: 'light',
+      readableLineWidth: false,
+      onChange(doc: string) {
+        isInternalChange = true;
+        emits('update:modelValue', doc);
+        emits('on-input', doc);
+        isInternalChange = false;
+      },
+      onLinkClick(linktext: string) {
+        if (urlRegExp.test(linktext)) {
+          openShell(linktext);
+        }
+      },
+      onExternalLinkClick(url: string) {
+        openShell(url);
+      },
     },
-    onLinkClick(linktext: string) {
-      if (urlRegExp.test(linktext)) {
-        openShell(linktext);
-      }
-    },
-    onExternalLinkClick(url: string) {
-      openShell(url);
-    }
-  }, backend);
+    backend,
+  );
 
   // 聚焦并滚动到底部
   editor.focus();
@@ -109,22 +120,25 @@ const loadEditor = () => {
 };
 
 const createImageDir = async () => {
-  if (!await exists(currentItemImagePath.value)) {
+  if (!(await exists(currentItemImagePath.value))) {
     await mkdir(currentItemImagePath.value, { recursive: true });
   }
   const currentUidImagePath = await join(currentItemImagePath.value, props.uid);
-  if (!await exists(currentUidImagePath)) {
+  if (!(await exists(currentUidImagePath))) {
     await mkdir(currentUidImagePath, { recursive: true });
   }
 };
 
 // 外部内容变更时同步到编辑器
-watch(() => props.modelValue, (newValue) => {
-  if (isInternalChange) return;
-  if (editor && newValue !== editor.getDoc()) {
-    editor.setDoc(newValue);
-  }
-});
+watch(
+  () => props.modelValue,
+  newValue => {
+    if (isInternalChange) return;
+    if (editor && newValue !== editor.getDoc()) {
+      editor.setDoc(newValue);
+    }
+  },
+);
 
 /** 获取编辑器 DOM 快照 HTML */
 const getHtmlSnapshot = (): string => {
@@ -165,7 +179,7 @@ const contextMenu = (event: MouseEvent) => {
               navigator.clipboard.writeText(selection);
             }
         }
-      }
+      },
     },
     {
       text: '粘贴',
@@ -174,7 +188,7 @@ const contextMenu = (event: MouseEvent) => {
       handler: async () => {
         try {
           const clipboardList = await window.navigator.clipboard.read();
-          if (!clipboardList || !clipboardList.length) return;
+          if (!clipboardList?.length) return;
 
           const firstClipboard = clipboardList[0];
           if (!firstClipboard) return;
@@ -188,7 +202,11 @@ const contextMenu = (event: MouseEvent) => {
             const ext = types[0].split('/')[1] || 'png';
             await createImageDir();
             const uuidStr = uuid();
-            const imagePath = await join(currentItemImagePath.value, props.uid, `${uuidStr}.${ext}`);
+            const imagePath = await join(
+              currentItemImagePath.value,
+              props.uid,
+              `${uuidStr}.${ext}`,
+            );
             await writeFile(imagePath, new Uint8Array(buffer));
             const mdImage = `![${uuidStr}](atom:///${imagePath})`;
             // 通过 CM6 view 插入
@@ -202,7 +220,9 @@ const contextMenu = (event: MouseEvent) => {
 
           // 粘贴文本
           if (types.includes('text/plain')) {
-            const text = await (await firstClipboard.getType('text/plain')).text();
+            const text = await (
+              await firstClipboard.getType('text/plain')
+            ).text();
             if (editor) {
               const view = editor.view;
               const { from, to } = view.state.selection.main;
@@ -212,8 +232,8 @@ const contextMenu = (event: MouseEvent) => {
         } catch (error) {
           console.error('粘贴失败:', error);
         }
-      }
-    }
+      },
+    },
   ];
 
   if (targetName === 'IMG') {
@@ -225,7 +245,7 @@ const contextMenu = (event: MouseEvent) => {
         iconName: ['iconfont', 'icon-folderOpen'],
         handler: () => {
           openShell(targetImg.src.replace('atom:///', ''), 'folder');
-        }
+        },
       });
       menuList.unshift({
         text: '打开图片',
@@ -233,7 +253,7 @@ const contextMenu = (event: MouseEvent) => {
         iconName: ['iconfont', 'icon-tupian'],
         handler: () => {
           openShell(targetImg.src.replace('atom:///', ''));
-        }
+        },
       });
     }
     // 图片预览
@@ -249,7 +269,7 @@ const contextMenu = (event: MouseEvent) => {
         const width = Math.min(Math.max(naturalWidth, 500), availWidth);
         const height = Math.min(Math.max(naturalHeight, 300), availHeight);
         await windowManager.openImagePreview(targetImg.src, width, height);
-      }
+      },
     });
   }
 

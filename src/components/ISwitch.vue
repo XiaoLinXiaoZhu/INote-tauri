@@ -20,10 +20,10 @@ import { ref, watch } from 'vue';
 const props = defineProps({
   modelValue: {
     type: Boolean,
-    default: false
+    default: false,
   },
   styled: String,
-  disabled: Boolean
+  disabled: Boolean,
 });
 
 const emits = defineEmits(['update:modelValue', 'change']);
@@ -33,7 +33,7 @@ watch(
   () => props.modelValue,
   nv => {
     checkedStatus.value = nv;
-  }
+  },
 );
 
 const checkStatus = () => {

@@ -44,5 +44,5 @@
 .right-click-menu-list .disabled-item {
   color: #ccc;
   cursor: default;
-  background-color: #fff !important;
+  background-color: #fff;
 }

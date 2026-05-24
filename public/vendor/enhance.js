@@ -1,5 +1,4 @@
 (() => {
-  "use strict";
   function t() {
     function t(t, e, n) {
       Object.defineProperty(t, e, {
@@ -12,15 +11,15 @@
     function e(t, e, n) {
       Object.defineProperty(t, e, { get: n, enumerable: !1, configurable: !0 });
     }
-    for (var n = window, r = 0, o = ["TouchEvent"]; r < o.length; r++) {
+    for (var n = window, r = 0, o = ['TouchEvent']; r < o.length; r++) {
       var i = o[r];
-      void 0 === n[i] && (n[i] = function () {});
+      void 0 === n[i] && (n[i] = () => {});
     }
     try {
       var s = window.matchMedia;
       s &&
-        !s("(prefers-color-scheme: dark)").addEventListener &&
-        (window.matchMedia = function (t) {
+        !s('(prefers-color-scheme: dark)').addEventListener &&
+        (window.matchMedia = t => {
           var e = s(t);
           return (
             e.addEventListener ||
@@ -37,96 +36,88 @@
     } catch (t) {
       console.error(t);
     }
-    (window.ResizeObserver ||
-      (window.ResizeObserver = (function () {
+    window.ResizeObserver ||
+      (window.ResizeObserver = (() => {
         function t() {}
         return (
-          (t.prototype.observe = function () {}),
-          (t.prototype.unobserve = function () {}),
-          (t.prototype.disconnect = function () {}),
+          (t.prototype.observe = () => {}),
+          (t.prototype.unobserve = () => {}),
+          (t.prototype.disconnect = () => {}),
           t
         );
       })()),
       Object.isEmpty ||
-        t(Object, "isEmpty", function (t) {
-          for (var e in t) if (t.hasOwnProperty(e)) return !1;
+        t(Object, 'isEmpty', t => {
+          for (var e in t) if (Object.hasOwn(t, e)) return !1;
           return !0;
         }),
       Object.each ||
-        (Object.each = function (t, e, n) {
+        (Object.each = (t, e, n) => {
           for (var r in t)
-            if (t.hasOwnProperty(r) && !1 === e.call(n, t[r], r)) return !1;
+            if (Object.hasOwn(t, r) && !1 === e.call(n, t[r], r)) return !1;
           return !0;
         }),
       Array.combine ||
-        (Array.combine = function (t) {
+        (Array.combine = t => {
           for (var e = 0, n = 0, r = t; n < r.length; n++) {
             e += r[n].length;
           }
           for (var o = new Array(e), i = 0, s = 0, a = t; s < a.length; s++)
             for (var p = 0, c = a[s]; p < c.length; p++) {
               var u = c[p];
-              ((o[i] = u), i++);
+              (o[i] = u), i++;
             }
           return o;
         }),
       Array.prototype.first ||
-        t(Array.prototype, "first", function () {
+        t(Array.prototype, 'first', function () {
           if (0 !== this.length) return this[0];
         }),
       Array.prototype.last ||
-        t(Array.prototype, "last", function () {
+        t(Array.prototype, 'last', function () {
           if (0 !== this.length) return this[this.length - 1];
         }),
       Array.prototype.contains ||
         t(
           Array.prototype,
-          "contains",
+          'contains',
           Array.prototype.includes ||
             function (t) {
               return -1 !== this.indexOf(t);
             },
         ),
       Array.prototype.remove ||
-        t(Array.prototype, "remove", function (t) {
+        t(Array.prototype, 'remove', function (t) {
           for (var e = this.length - 1; e >= 0; e--)
             this[e] === t && this.splice(e, 1);
         }),
       Array.prototype.shuffle ||
-        t(Array.prototype, "shuffle", function () {
+        t(Array.prototype, 'shuffle', function () {
           for (var t, e, n = this.length; 0 !== n; )
-            ((e = Math.floor(Math.random() * n)),
+            (e = Math.floor(Math.random() * n)),
               (t = this[(n -= 1)]),
               (this[n] = this[e]),
-              (this[e] = t));
+              (this[e] = t);
           return this;
         }),
       Array.prototype.findLastIndex ||
-        t(Array.prototype, "findLastIndex", function (t) {
+        t(Array.prototype, 'findLastIndex', function (t) {
           for (var e = this.length - 1; e <= 0; e--)
             if (t(this[e], e)) return e;
           return -1;
         }),
       Array.prototype.unique ||
-        t(Array.prototype, "unique", function () {
+        t(Array.prototype, 'unique', function () {
           return Array.from(new Set(this).values());
         }),
-      Math.clamp ||
-        (Math.clamp = function (t, e, n) {
-          return Math.min(Math.max(t, e), n);
-        }),
-      Math.square ||
-        (Math.square = function (t) {
-          return t * t;
-        }),
+      Math.clamp || (Math.clamp = (t, e, n) => Math.min(Math.max(t, e), n)),
+      Math.square || (Math.square = t => t * t),
       String.isString ||
-        (String.isString = function (t) {
-          return "string" == typeof t || t instanceof String;
-        }),
+        (String.isString = t => 'string' == typeof t || t instanceof String),
       String.prototype.contains ||
         t(
           String.prototype,
-          "contains",
+          'contains',
           String.prototype.includes ||
             function (t) {
               return -1 !== this.indexOf(t);
@@ -145,41 +136,36 @@
         (String.prototype.format = function () {
           for (var t = [], e = 0; e < arguments.length; e++)
             t[e] = arguments[e];
-          return this.replace(/{(\d+)}/g, function (e, n) {
-            return void 0 !== t[n] ? t[n] : e;
-          });
+          return this.replace(/{(\d+)}/g, (e, n) =>
+            void 0 !== t[n] ? t[n] : e,
+          );
         }),
-      Number.isNumber ||
-        t(Number, "isNumber", function (t) {
-          return "number" == typeof t;
-        }),
-      t(window, "isBoolean", function (t) {
-        return "boolean" == typeof t;
-      }));
-    var a = function (t) {
+      Number.isNumber || t(Number, 'isNumber', t => 'number' == typeof t),
+      t(window, 'isBoolean', t => 'boolean' == typeof t);
+    var a = t => {
       var e = t.nodeType;
       if (1 === e || 9 === e || 11 === e) {
-        if ("string" == typeof t.textContent) return t.textContent;
+        if ('string' == typeof t.textContent) return t.textContent;
         for (var n = [], r = t.firstChild; r; r = r.nextSibling) n.push(a(r));
-        return n.join("");
+        return n.join('');
       }
-      return ((3 === e || 4 === e) && t.nodeValue) || "";
+      return ((3 === e || 4 === e) && t.nodeValue) || '';
     };
     function p(t) {
       var e = this.style;
-      for (var n in t) t.hasOwnProperty(n) && (e[n] = t[n]);
+      for (var n in t) Object.hasOwn(t, n) && (e[n] = t[n]);
     }
     function c(t) {
       var e = this.style;
-      for (var n in t) t.hasOwnProperty(n) && e.setProperty(n, t[n]);
+      for (var n in t) Object.hasOwn(t, n) && e.setProperty(n, t[n]);
     }
-    ((Element.prototype.getText = function () {
+    (Element.prototype.getText = function () {
       return a(this);
     }),
       (Element.prototype.setText = function (t) {
-        !(function (t, e) {
+        !((t, e) => {
           if (e instanceof DocumentFragment || e instanceof Node)
-            return (t.empty(), void t.appendChild(e));
+            return t.empty(), void t.appendChild(e);
           String.isString(e) || (e = String(e));
           var n = t.nodeType;
           (1 !== n && 9 !== n && 11 !== n) || (t.textContent = e);
@@ -200,8 +186,8 @@
         for (var e = 0; e < t.length; e++) this.classList.remove(t[e]);
       }),
       (Element.prototype.toggleClass = function (t, e) {
-        (t instanceof Array || (t = [t]),
-          e ? this.addClasses(t) : this.removeClasses(t));
+        t instanceof Array || (t = [t]),
+          e ? this.addClasses(t) : this.removeClasses(t);
       }),
       (Element.prototype.hasClass = function (t) {
         return this.classList.contains(t);
@@ -210,8 +196,8 @@
         Element.prototype,
         Document.prototype,
         DocumentFragment.prototype,
-      ].forEach(function (e) {
-        t(e, "prepend", function () {
+      ].forEach(e => {
+        t(e, 'prepend', function () {
           for (var t = [], e = 0; e < arguments.length; e++)
             t[e] = arguments[e];
           for (
@@ -252,13 +238,13 @@
         ) {
           for (var i = o[r]; e && !n.has(e); ) {
             var s = e;
-            ((e = e.nextSibling), this.removeChild(s));
+            (e = e.nextSibling), this.removeChild(s);
           }
           i !== e ? this.insertBefore(i, e) : (e = e.nextSibling);
         }
         for (; e; ) {
           s = e;
-          ((e = e.nextSibling), this.removeChild(s));
+          (e = e.nextSibling), this.removeChild(s);
         }
       }),
       (Node.prototype.appendText = function (t) {
@@ -272,10 +258,10 @@
           !!((e = this.constructorWin[t.name]) && this instanceof e)
         );
       }),
-      e(Node.prototype, "doc", function () {
+      e(Node.prototype, 'doc', function () {
         return this.ownerDocument || document;
       }),
-      e(Node.prototype, "win", function () {
+      e(Node.prototype, 'win', function () {
         return this.doc.defaultView || window;
       }),
       (Node.prototype.constructorWin = window),
@@ -284,13 +270,13 @@
       }),
       (Element.prototype.setAttrs = function (t) {
         for (var e in t)
-          if (t.hasOwnProperty(e)) {
+          if (Object.hasOwn(t, e)) {
             var n = t[e];
             this.setAttr(e, n);
           }
       }),
       (Element.prototype.getAttr = Element.prototype.getAttribute),
-      t(Element.prototype, "matchParent", function (t, e) {
+      t(Element.prototype, 'matchParent', function (t, e) {
         if (this.matches(t)) return this;
         if (this === e) return null;
         var n = this.parentElement;
@@ -299,7 +285,7 @@
       (Element.prototype.getCssPropertyValue = function (t, e) {
         return getComputedStyle(this, e).getPropertyValue(t).trim();
       }),
-      t(Element.prototype, "isActiveElement", function () {
+      t(Element.prototype, 'isActiveElement', function () {
         for (var t = this; t; ) {
           if (t.doc.activeElement !== t) return !1;
           var e = t.win.frameElement;
@@ -310,18 +296,18 @@
       }),
       HTMLElement.prototype.show ||
         (HTMLElement.prototype.show = function () {
-          "none" === this.style.display &&
-            ((this.style.display = this.getAttribute("data-display") || ""),
-            this.removeAttribute("data-display"));
+          'none' === this.style.display &&
+            ((this.style.display = this.getAttribute('data-display') || ''),
+            this.removeAttribute('data-display'));
         }),
       HTMLElement.prototype.hide ||
         (HTMLElement.prototype.hide = function () {
           var t = this.style.display;
-          "none" !== t &&
-            ((this.style.display = "none"),
+          'none' !== t &&
+            ((this.style.display = 'none'),
             t
-              ? this.setAttribute("data-display", t)
-              : this.removeAttribute("data-display"));
+              ? this.setAttribute('data-display', t)
+              : this.removeAttribute('data-display'));
         }),
       HTMLElement.prototype.toggle ||
         (HTMLElement.prototype.toggle = function (t) {
@@ -329,49 +315,42 @@
         }),
       HTMLElement.prototype.toggleVisibility ||
         (HTMLElement.prototype.toggleVisibility = function (t) {
-          this.style.visibility = t ? "" : "hidden";
+          this.style.visibility = t ? '' : 'hidden';
         }),
-      t(HTMLElement.prototype, "isShown", function () {
+      t(HTMLElement.prototype, 'isShown', function () {
         return !!this.offsetParent;
       }),
-      e(HTMLElement.prototype, "innerWidth", function () {
+      e(HTMLElement.prototype, 'innerWidth', function () {
         var t = getComputedStyle(this),
           e = parseFloat(t.paddingLeft),
           n = parseFloat(t.paddingRight);
         return (
-          isNaN(e) && (e = 0),
-          isNaN(n) && (n = 0),
-          this.scrollWidth - e - n
+          isNaN(e) && (e = 0), isNaN(n) && (n = 0), this.scrollWidth - e - n
         );
       }),
-      e(HTMLElement.prototype, "innerHeight", function () {
+      e(HTMLElement.prototype, 'innerHeight', function () {
         var t = getComputedStyle(this),
           e = parseFloat(t.paddingTop),
           n = parseFloat(t.paddingBottom);
         return (
-          isNaN(e) && (e = 0),
-          isNaN(n) && (n = 0),
-          this.scrollHeight - e - n
+          isNaN(e) && (e = 0), isNaN(n) && (n = 0), this.scrollHeight - e - n
         );
       }),
-      t(HTMLElement.prototype, "setCssStyles", p),
-      t(SVGElement.prototype, "setCssStyles", p),
-      t(HTMLElement.prototype, "setCssProps", c),
-      t(SVGElement.prototype, "setCssProps", c),
-      t(HTMLElement.prototype, "addEventListeners", function (t) {
+      t(HTMLElement.prototype, 'setCssStyles', p),
+      t(SVGElement.prototype, 'setCssStyles', p),
+      t(HTMLElement.prototype, 'setCssProps', c),
+      t(SVGElement.prototype, 'setCssProps', c),
+      t(HTMLElement.prototype, 'addEventListeners', function (t) {
         for (var e in t)
-          if (t.hasOwnProperty(e)) {
+          if (Object.hasOwn(t, e)) {
             var n = e,
               r = t[n];
-            "function" == typeof r && this.addEventListener(n, r);
+            'function' == typeof r && this.addEventListener(n, r);
           }
       }),
-      (window.fish = function (t) {
-        return document.querySelector(t);
-      }),
-      (window.fishAll = function (t) {
-        return Array.prototype.slice.call(document.querySelectorAll(t));
-      }),
+      (window.fish = t => document.querySelector(t)),
+      (window.fishAll = t =>
+        Array.prototype.slice.call(document.querySelectorAll(t))),
       (Element.prototype.find = function (t) {
         return this.querySelector(t);
       }),
@@ -380,7 +359,7 @@
       }),
       (Element.prototype.findAllSelf = function (t) {
         var e = Array.prototype.slice.call(this.querySelectorAll(t));
-        return (this.matches(t) && e.unshift(this), e);
+        return this.matches(t) && e.unshift(this), e;
       }),
       (DocumentFragment.prototype.find = function (t) {
         return this.querySelector(t);
@@ -390,27 +369,27 @@
       }),
       (Node.prototype.createEl = function (t, e, n) {
         return (
-          "string" == typeof e && (e = { cls: e }),
+          'string' == typeof e && (e = { cls: e }),
           ((e = e || {}).parent = this),
           createEl(t, e, n)
         );
       }),
       (Node.prototype.createDiv = function (t, e) {
-        return this.createEl("div", t, e);
+        return this.createEl('div', t, e);
       }),
       (Node.prototype.createSpan = function (t, e) {
-        return this.createEl("span", t, e);
+        return this.createEl('span', t, e);
       }),
       (Node.prototype.createSvg = function (t, e, n) {
         return (
-          "string" == typeof e && (e = { cls: e }),
+          'string' == typeof e && (e = { cls: e }),
           ((e = e || {}).parent = this),
           createSvg(t, e, n)
         );
       }),
-      (window.createEl = function (t, e, n) {
+      (window.createEl = (t, e, n) => {
         var r = document.createElement(t);
-        "string" == typeof e && (e = { cls: e });
+        'string' == typeof e && (e = { cls: e });
         var o = e || {},
           i = o.cls,
           s = o.text,
@@ -423,7 +402,7 @@
           d = o.prepend,
           h = o.href;
         for (var y in (i &&
-          (Array.isArray(i) ? (r.className = i.join(" ")) : (r.className = i)),
+          (Array.isArray(i) ? (r.className = i.join(' ')) : (r.className = i)),
         s && r.setText(s),
         a && r.setAttrs(a),
         void 0 !== p && (r.title = p),
@@ -433,7 +412,7 @@
             r instanceof HTMLOptionElement) &&
           (r.value = c),
         l && r instanceof HTMLInputElement && (r.type = l),
-        l && r instanceof HTMLStyleElement && r.setAttribute("type", l),
+        l && r instanceof HTMLStyleElement && r.setAttribute('type', l),
         u && r instanceof HTMLInputElement && (r.placeholder = u),
         h &&
           (r instanceof HTMLAnchorElement ||
@@ -443,25 +422,22 @@
         n && n(r),
         f && (d ? f.insertBefore(r, f.firstChild) : f.appendChild(r)),
         e))
-          if (e.hasOwnProperty(y) && y.startsWith("on")) {
+          if (Object.hasOwn(e, y) && y.startsWith('on')) {
             var m = y,
               v = e[m];
-            "function" == typeof v && r.addEventListener(m.substring(2), v);
+            'function' == typeof v && r.addEventListener(m.substring(2), v);
           }
         // Auto-tag form elements to scope vendor CSS
-        if ({button:1,input:1,select:1,textarea:1}[t]) r.classList.add("ob-styled");
+        if ({ button: 1, input: 1, select: 1, textarea: 1 }[t])
+          r.classList.add('ob-styled');
         return r;
       }),
-      (window.createDiv = function (t, e) {
-        return createEl("div", t, e);
-      }),
-      (window.createSpan = function (t, e) {
-        return createEl("span", t, e);
-      }),
-      (window.createSvg = function (t, e, n) {
+      (window.createDiv = (t, e) => createEl('div', t, e)),
+      (window.createSpan = (t, e) => createEl('span', t, e)),
+      (window.createSvg = (t, e, n) => {
         var r,
-          o = document.createElementNS("http://www.w3.org/2000/svg", t);
-        "string" == typeof e && (e = { cls: e });
+          o = document.createElementNS('http://www.w3.org/2000/svg', t);
+        'string' == typeof e && (e = { cls: e });
         var i = e || {},
           s = i.cls,
           a = i.attr,
@@ -478,10 +454,10 @@
           o
         );
       }),
-      (window.createFragment = function (t) {
+      (window.createFragment = t => {
         var e = document.createDocumentFragment();
-        return (t && t(e), e);
-      }));
+        return t && t(e), e;
+      });
     var u = function (t, e, n, r) {
         var o = this._EVENTS;
         o || ((o = {}), (this._EVENTS = o));
@@ -494,43 +470,42 @@
             o && n.call(this, t, o);
           }
         };
-        (i.push({ selector: e, listener: n, options: r, callback: s }),
-          this.addEventListener(t, s, r));
+        i.push({ selector: e, listener: n, options: r, callback: s }),
+          this.addEventListener(t, s, r);
       },
       l = function (t, e, n, r) {
-        var o = this,
-          i = this._EVENTS;
+        var i = this._EVENTS;
         if (i) {
           var s = i[t];
           s &&
-            (i[t] = s.filter(function (i) {
+            (i[t] = s.filter(i => {
               if (i.selector === e && i.listener === n && i.options === r) {
                 var s = i.callback;
-                return (o.removeEventListener(t, s, r), !1);
+                return this.removeEventListener(t, s, r), !1;
               }
               return !0;
             }));
         }
       };
-    ((HTMLElement.prototype.on = u),
+    (HTMLElement.prototype.on = u),
       (HTMLElement.prototype.off = l),
       (Document.prototype.on = u),
       (Document.prototype.off = l),
       (HTMLElement.prototype.onClickEvent = function (t, e) {
-        (this.addEventListener("click", t, e),
-          this.addEventListener("auxclick", t, e));
+        this.addEventListener('click', t, e),
+          this.addEventListener('auxclick', t, e);
       }),
       (HTMLElement.prototype.trigger = function (t) {
-        var e = document.createEvent("HTMLEvents");
-        (e.initEvent(t, !0, !1), this.dispatchEvent(e));
+        var e = document.createEvent('HTMLEvents');
+        e.initEvent(t, !0, !1), this.dispatchEvent(e);
       }),
-      e(UIEvent.prototype, "targetNode", function () {
+      e(UIEvent.prototype, 'targetNode', function () {
         return this.target;
       }),
-      e(UIEvent.prototype, "win", function () {
+      e(UIEvent.prototype, 'win', function () {
         return this.view || window;
       }),
-      e(UIEvent.prototype, "doc", function () {
+      e(UIEvent.prototype, 'doc', function () {
         return this.win.document;
       }),
       (UIEvent.prototype.instanceOf = function (t) {
@@ -539,36 +514,35 @@
         if (!e) return !1;
         var n = e[t.name];
         return !(!n || n === t) && this instanceof n;
-      }));
+      });
     var f = new WeakMap();
-    ((HTMLElement.prototype.onNodeInserted = function (t, e) {
-      var n = this,
-        r = function (r) {
-          n.isShown() && (e && o(), "node-inserted" === r.animationName && t());
+    (HTMLElement.prototype.onNodeInserted = function (t, e) {
+      var r = r => {
+          this.isShown() &&
+            (e && o(), 'node-inserted' === r.animationName && t());
         },
-        o = function () {
-          n.removeEventListener("animationstart", r);
-          var t = (f.get(n) || 0) - 1;
+        o = () => {
+          this.removeEventListener('animationstart', r);
+          var t = (f.get(this) || 0) - 1;
           t <= 0
-            ? (f.delete(n), n.removeClass("node-insert-event"))
-            : f.set(n, t);
+            ? (f.delete(this), this.removeClass('node-insert-event'))
+            : f.set(this, t);
         };
       return (
         f.set(this, (f.get(this) || 0) + 1),
-        this.addClass("node-insert-event"),
-        this.addEventListener("animationstart", r),
+        this.addClass('node-insert-event'),
+        this.addEventListener('animationstart', r),
         o
       );
     }),
       (HTMLElement.prototype.onWindowMigrated = function (t) {
-        var e = this,
-          n = this.win;
-        return this.onNodeInserted(function () {
-          var r = e.win;
+        var n = this.win;
+        return this.onNodeInserted(() => {
+          var r = this.win;
           r !== n && t((n = r));
         });
       }),
-      (window.ajax = function (t) {
+      (window.ajax = t => {
         var e = t.method,
           n = t.url,
           r = t.success,
@@ -576,68 +550,54 @@
           i = t.data,
           s = t.headers,
           a = t.withCredentials;
-        e = e || "GET";
+        e = e || 'GET';
         var p = new XMLHttpRequest();
         if (
           ((t.req = p),
           p.open(e, n, !0),
-          (p.onload = function () {
+          (p.onload = () => {
             var t = p.status,
               e = p.response;
             t >= 200 && t < 400 ? r && r(e, p) : o && o(e, p);
           }),
-          (p.onerror = function (t) {
+          (p.onerror = t => {
             o && o(t, p);
           }),
           s)
         )
-          for (var c in s) s.hasOwnProperty(c) && p.setRequestHeader(c, s[c]);
-        ((p.withCredentials = a || !1),
+          for (var c in s) Object.hasOwn(s, c) && p.setRequestHeader(c, s[c]);
+        (p.withCredentials = a || !1),
           i
             ? (void 0 === a && (p.withCredentials = !0),
               String.isString(i)
                 ? p.send(i)
                 : i instanceof ArrayBuffer
                   ? (p.setRequestHeader(
-                      "Content-Type",
-                      "application/octet-stream",
+                      'Content-Type',
+                      'application/octet-stream',
                     ),
                     p.send(i))
                   : (p.setRequestHeader(
-                      "Content-Type",
-                      "application/json; charset=utf-8",
+                      'Content-Type',
+                      'application/json; charset=utf-8',
                     ),
                     p.send(JSON.stringify(i))))
-            : p.send());
+            : p.send();
       }),
-      (window.ajaxPromise = function (t) {
-        return new Promise(function (e, n) {
-          ((t.success = e),
-            (t.error = function (t, e) {
-              return n(e);
-            }),
-            ajax(t));
-        });
-      }),
-      (window.ready = function (t) {
-        "loading" !== document.readyState
+      (window.ajaxPromise = t =>
+        new Promise((e, n) => {
+          (t.success = e), (t.error = (t, e) => n(e)), ajax(t);
+        })),
+      (window.ready = t => {
+        'loading' !== document.readyState
           ? t()
-          : document.addEventListener("DOMContentLoaded", t);
+          : document.addEventListener('DOMContentLoaded', t);
       }),
-      (window.sleep = function (t) {
-        return new Promise(function (e) {
-          return window.setTimeout(e, t);
-        });
-      }),
-      (window.nextFrame = function () {
-        return new Promise(function (t) {
-          return window.requestAnimationFrame(function () {
-            return t();
-          });
-        });
-      }),
+      (window.sleep = t => new Promise(e => window.setTimeout(e, t))),
+      (window.nextFrame = () =>
+        new Promise(t => window.requestAnimationFrame(() => t()))),
       (window.activeWindow = window),
-      (window.activeDocument = document));
+      (window.activeDocument = document);
   }
-  (t(), (window.globalEnhance = t));
+  t(), (window.globalEnhance = t);
 })();

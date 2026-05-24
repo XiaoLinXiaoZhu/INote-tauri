@@ -27,25 +27,33 @@
 </template>
 
 <script setup lang="ts">
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import dayjs from 'dayjs';
+import {
+  onBeforeMount,
+  onMounted,
+  onUnmounted,
+  type PropType,
+  type Ref,
+  ref,
+  watch,
+} from 'vue';
+import IMessageBox from '@/components/IMessageBox.vue';
 import CreateRightClick from '@/components/IRightClick';
 import { noteService } from '@/service/tauriNoteService';
-import type { NoteListItem } from '@/types/notes';
 import { windowManager } from '@/service/windowManager';
-import dayjs from 'dayjs';
-import { onBeforeMount, onMounted, onUnmounted, PropType, Ref, ref, watch } from 'vue';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { notesState } from '@/store/notes.state';
-import IMessageBox from '@/components/IMessageBox.vue';
+import type { NoteListItem } from '@/types/notes';
 
 const props = defineProps({
   list: {
     type: Array as PropType<NoteListItem[]>,
-    default: () => []
+    default: () => [],
   },
   searchValue: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 });
 const emits = defineEmits(['changeBlockState']);
 const viewNotesList = ref<NoteListItem[]>([]);
@@ -65,7 +73,7 @@ watch(
   () => props.searchValue,
   nv => {
     if (nv) {
-      if (props.list && props.list.length) {
+      if (props.list?.length) {
         viewNotesList.value = props.list;
       } else {
         viewNotesList.value = [];
@@ -73,7 +81,7 @@ watch(
     } else {
       getAllDBNotes();
     }
-  }
+  },
 );
 
 onMounted(async () => {
@@ -113,21 +121,24 @@ const setupEventListeners = async () => {
 };
 
 onUnmounted(() => {
-  unlistenFns.forEach(unlisten => unlisten());
+  unlistenFns.forEach(unlisten => {
+    unlisten();
+  });
 });
 
 const getAllDBNotes = async () => {
   try {
     const notesAllList = await noteService.getAllNotes();
-    const transformedNotes: NoteListItem[] = notesAllList?.map(note => ({
-      uid: note.uid || '',
-      className: note.color || '',
-      mdContent: note.md_content || '',
-      htmlSnapshot: note.html_snapshot || '',
-      createdAt: new Date(note.created_at || ''),
-      updatedAt: new Date(note.updated_at || ''),
-      remove: false,
-    })) || [];
+    const transformedNotes: NoteListItem[] =
+      notesAllList?.map(note => ({
+        uid: note.uid || '',
+        className: note.color || '',
+        mdContent: note.md_content || '',
+        htmlSnapshot: note.html_snapshot || '',
+        createdAt: new Date(note.created_at || ''),
+        updatedAt: new Date(note.updated_at || ''),
+        remove: false,
+      })) || [];
 
     viewNotesList.value = transformedNotes;
     emits('changeBlockState', transformedNotes.length ? 1 : 2);
@@ -146,7 +157,7 @@ const contextMenu = (event: MouseEvent, uid: string) => {
       iconName: ['iconfont', 'icon-newopen'],
       handler: () => {
         openEditorWindow(uid);
-      }
+      },
     },
     {
       text: '删除笔记',
@@ -159,8 +170,8 @@ const contextMenu = (event: MouseEvent, uid: string) => {
         } else {
           deleteNotes();
         }
-      }
-    }
+      },
+    },
   ]);
 };
 
@@ -189,7 +200,11 @@ const deleteNotesUidDir = async () => {
     const { appDataDir } = await import('@tauri-apps/api/path');
 
     const appDataPath = await appDataDir();
-    const imagesPath = await join(appDataPath, 'images', deleteCurrentUid.value);
+    const imagesPath = await join(
+      appDataPath,
+      'images',
+      deleteCurrentUid.value,
+    );
 
     if (await exists(imagesPath)) {
       await remove(imagesPath, { recursive: true });

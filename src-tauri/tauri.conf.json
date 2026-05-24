@@ -33,9 +33,7 @@
   "bundle": {
     "active": true,
     "targets": ["app"],
-    "icon": [
-      "icons/iNote.ico"
-    ]
+    "icon": ["icons/iNote.ico"]
   },
   "plugins": {
     "sql": {

@@ -4,8 +4,9 @@
 
 <script lang="ts" setup>
 // 这个主要是用来在沉浸模式下拖拽的
-import { throttle } from '@/utils';
+
 import { onMounted, ref } from 'vue';
+import { throttle } from '@/utils';
 
 const headerDragBarRef = ref<null | HTMLDivElement>(null);
 
@@ -20,7 +21,7 @@ onMounted(() => {
         headerDragBarRef.value?.classList.add('hide-drag-bar');
         headerDragBarRef.value?.classList.remove('show-drag-bar');
       }
-    }, 50)
+    }, 50),
   );
 });
 </script>

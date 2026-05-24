@@ -18,12 +18,12 @@ import { notesState } from '@/store/notes.state';
 const props = defineProps({
   title: {
     type: String,
-    default: ''
+    default: '',
   },
   isLink: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 </script>
 

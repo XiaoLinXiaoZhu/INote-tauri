@@ -23,12 +23,12 @@
 const props = defineProps({
   state: {
     type: Number,
-    default: 0
+    default: 0,
   },
   content: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 });
 const emits = defineEmits(['onDblclick']);
 </script>

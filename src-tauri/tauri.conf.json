@@ -1,6 +1,6 @@
 {
-  "productName": "I便笺",
-  "version": "1.1.5",
+  "productName": "iNote",
+  "version": "1.1.4",
   "identifier": "com.xlxz.inote",
   "build": {
     "beforeBuildCommand": "bun run build",
@@ -32,7 +32,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "appimage"],
+    "targets": "all",
     "icon": ["icons/iNote.ico"]
   },
   "plugins": {

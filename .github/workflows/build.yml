@@ -40,10 +40,10 @@ jobs:
             echo "Updated version in ./src-tauri/Cargo.toml"
           fi
 
-          # 更新tauri.conf.json5
-          if [ -f "./src-tauri/tauri.conf.json5" ]; then
-            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" ./src-tauri/tauri.conf.json5
-            echo "Updated version in ./src-tauri/tauri.conf.json5"
+          # 更新tauri.conf.json
+          if [ -f "./src-tauri/tauri.conf.json" ]; then
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" ./src-tauri/tauri.conf.json
+            echo "Updated version in ./src-tauri/tauri.conf.json"
           fi
           
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -55,7 +55,7 @@ jobs:
         run: |
           echo "Package.json version: $(grep -o '"version": *"[^"]*"' package.json | awk -F'"' '{print $4}')"
           echo "Cargo.toml version: $(grep -o '^version = "[^"]*"' src-tauri/Cargo.toml | awk -F'"' '{print $2}')"
-          echo "Tauri config version: $(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json5 | awk -F'"' '{print $4}')"
+          echo "Tauri config version: $(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json | awk -F'"' '{print $4}')"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

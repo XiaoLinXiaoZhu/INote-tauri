@@ -1,6 +1,6 @@
 {
   "productName": "iNote",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "identifier": "com.xlxz.inote",
   "build": {
     "beforeBuildCommand": "bun run build",
@@ -33,7 +33,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/iNote.ico"]
+    "icon": ["icons/icon.ico"]
   },
   "plugins": {
     "sql": {

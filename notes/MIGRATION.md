@@ -183,3 +183,5 @@ css: {
 - [Tauri 官方文档](https://tauri.studio/)
 - [Vite 官方文档](https://vitejs.dev/)
 - [Bun 官方文档](https://bun.sh/)
+
+> **说明**：本文档中引用的部分文件（`electronAdapter.ts`、`windowConfigService.ts`、`start-dev.bat` 等）在后续迭代中已被替换或移除，本文档仅保留作为历史参考。
